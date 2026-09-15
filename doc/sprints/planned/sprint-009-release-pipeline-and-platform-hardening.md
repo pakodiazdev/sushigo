@@ -6,11 +6,11 @@ status: Planned
 created: 2026-09-14
 started:
 completed:
-last_updated: 2026-09-14
+last_updated: 2026-09-15
 
 base_branch: main
 base_commit: 1116db34
-scope_issues: 15
+scope_issues: 16
 
 github_project: SushiGo Admin (#7)
 github_milestone:
@@ -28,10 +28,10 @@ next:
 
 ## 1. Executive Summary
 
-Sprint 009 contains **fifteen Issues** estimated at **31.75h optimistic / 76h pessimistic**. It is
+Sprint 009 contains **sixteen Issues** estimated at **33.75h optimistic / 80h pessimistic**. It is
 the first sprint to move SushiGo Admin beyond local dev-lab workspaces and a single manual preview
 deploy: seven Issues (`#632`–`#637`, plus the PHP contract Issue `#638`) build one coherent release
-pipeline, and eight more pick up conflict-free hardening and follow-up debt.
+pipeline, and nine more pick up conflict-free hardening and follow-up debt.
 
 The release-pipeline chain is the sprint's critical path and its principal value:
 
@@ -50,11 +50,14 @@ The release-pipeline chain is the sprint's critical path and its principal value
   restore drill, rollback documentation, uptime/health alerting) that must exist before SushiGo
   Admin carries real operational data.
 
-The remaining eight Issues are independent, conflict-free hardening and follow-up work that can run
+The remaining nine Issues are independent, conflict-free hardening and follow-up work that can run
 in parallel with the pipeline chain: **#638** enforces the declared PHP compatibility contract in
-CI (a Sprint 8 review finding); **#624** finishes the Spanish-copy translation `#576` deliberately
-deferred; **#613** adds the non-authoritative Stock Transfer availability preview `#573` deferred;
-**#612** produces the CI cross-mode wall-clock comparison artifact `#560` deferred; and **`#536`,
+CI (a Sprint 8 review finding); **#647** restores real per-surface CI badges (backend/frontend
+Lint+Test, Cypress spec count) self-hosted on the `badges` branch, after `#639` collapsed them into
+one combined badge when `#560` made GitHub's native per-workflow badge no longer meaningful;
+**#624** finishes the Spanish-copy translation `#576` deliberately deferred; **#613** adds the
+non-authoritative Stock Transfer availability preview `#573` deferred; **#612** produces the CI
+cross-mode wall-clock comparison artifact `#560` deferred; and **`#536`,
 `#537`, `#541`, `#542`, `#557`** restore five more `#490`-quarantined Cypress specs.
 
 ## 2. Context
@@ -79,6 +82,12 @@ Three additional gaps surfaced independently and were filed but never scheduled:
   avoid pulling a stock-projection UI dependency into that issue's scope (`#613`).
 - `#576` (Sprint 8 Inventory UX standardization) deliberately left the deep CRUD form fields'
   copy in English as a separable follow-up (`#624`, tracked in `#576`'s own PR `## 🤔 Assumptions`).
+- `#639` fixed the README's broken per-surface Tests/Lint badges by collapsing them into one
+  combined "CI" badge, since GitHub's native per-workflow `badge.svg` only reflects an entire
+  workflow's status and stopped being meaningful once `#560` unified six workflows into one
+  `ci.yml`. That traded away real per-surface visibility; `#647` restores it with self-hosted
+  badges rendered from each surface's own job outputs, following the same pattern already
+  established for `iteration-progress.svg`.
 
 Five more Cypress specs quarantined under `#490` remain skipped beyond the four Sprint 008 already
 restored (`#545`, `#546`, `#550`, `#535`): `attendance-close-day.cy.ts` (`#536`),
@@ -131,10 +140,11 @@ promotion.
 | ⏳ | #541 | Fix quarantined Cypress spec: employee-vacation-entitlement.cy.ts | Dev platform | P1 | 0.5h | 3h |
 | ⏳ | #542 | Fix quarantined Cypress spec: employees.cy.ts | Dev platform | P1 | 0.5h | 3h |
 | ⏳ | #557 | Fix quarantined Cypress spec: schedule-history.cy.ts (CI-only) | Dev platform | P1 | 0.75h | 3h |
-|  |  | **Total** |  |  | **31.75h** | **76h** |
+| ⏳ | #647 | Publish self-hosted per-surface CI badges (Backend/Frontend Lint+Test, Cypress) | Dev platform | P2 | 2h | 4h |
+|  |  | **Total** |  |  | **33.75h** | **80h** |
 
-Investment mix: dev-platform 11 (`#632`, `#633`, `#634`, `#636`, `#638`, `#612`, `#536`, `#537`,
-`#541`, `#542`, `#557`) · product-engineering 3 (`#635`, `#637`, `#624`) · product 1 (`#613`).
+Investment mix: dev-platform 12 (`#632`, `#633`, `#634`, `#636`, `#638`, `#612`, `#647`, `#536`,
+`#537`, `#541`, `#542`, `#557`) · product-engineering 3 (`#635`, `#637`, `#624`) · product 1 (`#613`).
 
 **Capabilities this scope delivers:**
 
@@ -150,6 +160,8 @@ Investment mix: dev-platform 11 (`#632`, `#633`, `#634`, `#636`, `#638`, `#612`,
 - A Production reliability baseline: automated backups, a proven restore drill, rollback/incident
   runbook, and baseline uptime/error alerting.
 - CI mechanically enforcing the repository's declared PHP compatibility floor.
+- Real per-surface CI status visibility restored in the README (backend/frontend Lint+Test,
+  Cypress spec count), self-hosted instead of depending on GitHub's per-workflow badge.
 - Five more quarantined Cypress specs restored and green in CI, plus three small carried-over
   follow-ups (Stock Transfer availability preview, remaining Inventory form Spanish copy, CI
   cross-mode wall-clock evidence) closed out.
@@ -192,7 +204,7 @@ _None yet — this sprint has not started._
 | **Critical** | #632, #633, #636, #637 | The environment/release contract and Production delivery + reliability baseline are the actual precondition for SushiGo Admin to carry real restaurant data at all |
 | **High** | #634, #638, #536, #537, #541, #542, #557 | QA is the hard gate every later promotion depends on; the PHP contract closes a real Sprint 8 review finding; the five quarantined specs restore CI coverage the suite is currently missing |
 | **Medium** | #635, #613 | Public Demo has real portfolio/business value but is not core restaurant operation; the Stock Transfer preview is a small, already-deferred UX convenience |
-| **Low** | #624, #612 | Copy-only translation follow-up and a non-blocking CI evidence artifact — valid work with no urgency |
+| **Low** | #624, #612, #647 | Copy-only translation follow-up, a non-blocking CI evidence artifact, and restored badge visibility — valid work with no urgency |
 
 ### Ordering principle
 
@@ -205,7 +217,8 @@ _None yet — this sprint has not started._
 ### Round 0 — Independent, conflict-free work (parallel from day one)
 
 Each Issue owns a distinct file surface with no dependency on the release-pipeline chain, so all
-nine may run concurrently whenever agent capacity is free.
+ten may run concurrently whenever agent capacity is free — except the one coordination pair noted
+below (T6/T9 both touch CI workflow files).
 
 | Lane | Issue | Owns | Opt. | Pess. |
 |---|---:|---|---:|---:|
@@ -218,7 +231,8 @@ nine may run concurrently whenever agent capacity is free.
 | T6 | #638 | `code/api/composer.json`, CI PHP-version jobs, compatibility docs | 1h | 3h |
 | T7 | #613 | `stock-transfer-form.tsx` (behavior: source-availability preview) | 2h | 5h |
 | T8 | #624 | Inventory CRUD form components (copy only) — starts **after** T7 lands (see §8) | 3h | 6h |
-|  |  | **Round effort** | **9.75h** | **35h** |
+| T9 | #647 | `.github/workflows/{ci,_api-ci,_webapp-ci,_e2e-ci}.yml`, new `.github/scripts/ci-badges/`, `README.md` — coordinate with T6 (see §9) | 2h | 4h |
+|  |  | **Round effort** | **11.75h** | **39h** |
 
 Each quarantined-spec fix must remove its `#490` `this.skip()` guard and prove the spec against a
 fresh isolated stack and the CI `e2e-ci` shard, exactly as Sprint 008's Round 0 did.
@@ -304,6 +318,7 @@ No other product-level dependency exists among the fifteen Issues; every Round 0
 | `features/inventory/transfers/components/stock-transfer-form.tsx` | #613, #624 | 0, 0 | #613 (behavior) lands first; #624 (copy-only) rebases after — see §8 |
 | `doc/conventions/ci/pipeline.md` | #612, #638 | 0, 0 | Both are documentation-only additions to the same CI reference doc; coordinate which lands first to avoid a trivial merge conflict — no shared runtime logic |
 | `.github/workflows/deploy-preview.yml` | #633 (indirectly, via same-origin API config), #634 (direct refactor) | 2, 3 | #634 owns this file's refactor; #633 only touches shared frontend/API config it depends on, not the workflow itself — sequenced by §8, not a same-round conflict |
+| `.github/workflows/_api-ci.yml` | #638, #647 | 0, 0 | #647 adds a `lint` job output + an `api-junit-merge` counting step; #638 may touch the PHP setup/version steps in the same file. Neither owns the other's addition — land whichever merges first, then rebase the second onto it; the changes don't overlap line-for-line |
 
 ### Conflict methodology
 
@@ -319,13 +334,13 @@ boundary (`doc/conventions/sprints.md` §10) — not held to closure.
 
 | Round | Issue count | Opt. total | Pess. total | Tracked total | vs Opt. | vs Pess. |
 |---|---:|---:|---:|---:|---:|---:|
-| 0 — Independent conflict-free work | 9 | 9.75h | 35h | — | — | — |
+| 0 — Independent conflict-free work | 10 | 11.75h | 39h | — | — | — |
 | 1 — Environment & release contract | 1 | 2h | 4h | — | — | — |
 | 2 — Immutable release image | 1 | 3h | 6h | — | — | — |
 | 3 — QA automatic deploy | 1 | 3h | 6h | — | — | — |
 | 4 — Demo and Production | 2 | 11h | 22h | — | — | — |
 | 5 — Production reliability baseline | 1 | 3h | 6h | — | — | — |
-| **Grand total** | **15** | **31.75h** | **76h** | **—** | **—** | **—** |
+| **Grand total** | **16** | **33.75h** | **80h** | **—** | **—** | **—** |
 
 ```text
 vs Opt.  = Tracked total − Optimistic total
@@ -424,8 +439,8 @@ _To be completed at closure._
 
 ## 18. Sprint Closure Checklist
 
-- [ ] All fifteen Issues (`#612`, `#613`, `#624`, `#632`, `#633`, `#634`, `#635`, `#636`, `#637`,
-      `#638`, `#536`, `#537`, `#541`, `#542`, `#557`) are merged and Done.
+- [ ] All sixteen Issues (`#612`, `#613`, `#624`, `#632`, `#633`, `#634`, `#635`, `#636`, `#637`,
+      `#638`, `#647`, `#536`, `#537`, `#541`, `#542`, `#557`) are merged and Done.
 - [ ] QA, Demo, and Production each have a documented, distinct data/secret boundary and the
       release-identity contract is implemented as designed (`#632`).
 - [ ] A green `main` CI run produces exactly one immutable, digest-addressable release image
@@ -450,6 +465,9 @@ _To be completed at closure._
       Stock write or N+1 query (`#613`).
 - [ ] A committed CI cross-mode wall-clock comparison artifact exists and is referenced from
       `doc/conventions/ci/pipeline.md` (`#612`).
+- [ ] The five self-hosted CI badges (backend/frontend Lint+Test, Cypress) render correctly on the
+      README from the `badges` branch, and a surface `ci.yml` legitimately skips on a given push
+      leaves its existing badge untouched rather than going stale or blank (`#647`).
 - [ ] Full API/webapp regression, lint, typecheck, and affected Cypress paths are green; SonarCloud
       new-code coverage ≥ 80% for every Issue.
 - [ ] Architecture, CI-pipeline, and deployment documentation reflect as-built behavior.
