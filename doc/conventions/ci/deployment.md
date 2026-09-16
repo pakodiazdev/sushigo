@@ -396,4 +396,13 @@ have a concrete starting checklist:
       "Internal / CI only" trust boundary this contract assigns to QA.
 - [ ] Design and build the Demo one-click/global-password login UX (product feature, not
       infrastructure — likely its own Sprint 009 issue), gated to compile only into the `preview`
-      target per "Two Docker build targets" above.
+      target per "Two Docker build targets" above. **Known blocker, found while implementing
+      #633:** `code/webapp/src/components/layout/Layout.tsx`'s `const devTools =
+      import.meta.env.DEV ? <DevDebugger /> : null` gates the entire feature on Vite's own
+      dev-server flag, which is always `false` for any `vite build` output — so `<DevDebugger />`
+      (and everything it imports) is dead-code-eliminated from **every** production bundle today,
+      `preview` included, regardless of `VITE_LOGIN_WITH_DEVDEBUG`/`VITE_APP_ENV`/
+      `VITE_DEV_LOGIN_ALLOWED_ENVIRONMENTS` (#633 wires all three correctly into the `preview`
+      target's build, verified empirically via `dist/assets/*.js`, but they're unreachable until
+      this line changes to check `isDevLoginEnabled()` instead). This issue must fix that gate,
+      not just add the UX.

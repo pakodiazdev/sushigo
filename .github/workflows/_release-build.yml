@@ -27,6 +27,22 @@ on:
         description: "Value for the VITE_LOGIN_WITH_DEVDEBUG build-arg ('true' | 'false')"
         required: true
         type: string
+      vite_app_env:
+        description: >-
+          Value for the VITE_APP_ENV build-arg. isDevLoginEnabled() requires this to appear in
+          vite_dev_login_allowed_environments below — both are Vite build-time constants that a
+          later deploy's runtime env vars cannot override, so whichever pipeline deploys this
+          target's Cloud Run service must set the matching *backend* APP_ENV at deploy time.
+          Only meaningful when login_with_devdebug is "true"; safe to leave at its default
+          otherwise.
+        required: false
+        type: string
+        default: production
+      vite_dev_login_allowed_environments:
+        description: "Value for the VITE_DEV_LOGIN_ALLOWED_ENVIRONMENTS build-arg (csv)"
+        required: false
+        type: string
+        default: ""
     outputs:
       digest:
         description: "Immutable Artifact Registry digest (sha256:...) of the built image"
@@ -89,6 +105,8 @@ jobs:
             --target "${{ inputs.target }}" \
             --build-arg API_URL="${{ vars.API_URL_PREVIEW }}" \
             --build-arg VITE_LOGIN_WITH_DEVDEBUG="${{ inputs.login_with_devdebug }}" \
+            --build-arg VITE_APP_ENV="${{ inputs.vite_app_env }}" \
+            --build-arg VITE_DEV_LOGIN_ALLOWED_ENVIRONMENTS="${{ inputs.vite_dev_login_allowed_environments }}" \
             -t "${IMAGE_URI}" \
             .
 

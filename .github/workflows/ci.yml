@@ -411,6 +411,13 @@ jobs:
       target: preview
       image_name: ${{ vars.IMAGE_NAME_PREVIEW }}
       login_with_devdebug: "true"
+      # Matches this repo's existing dev/devtest convention (.env.example's
+      # DEV_LOGIN_ALLOWED_ENVIRONMENTS default) rather than inventing a new value. Whichever
+      # pipeline deploys this preview-target image (QA's deploy-preview.yml / #634, or Demo /
+      # #635) must set the *backend* APP_ENV to "devtest" at deploy time for the frontend and
+      # backend gates to agree — see _release-build.yml's input description.
+      vite_app_env: devtest
+      vite_dev_login_allowed_environments: "dev,devtest"
     secrets: inherit
 
   # Builds and publishes the `prod-cloudrun`-target release image (#633, per TD-07) — the

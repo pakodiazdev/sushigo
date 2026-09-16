@@ -78,14 +78,22 @@ RUN npm ci
 # Stage para hacer build del frontend
 #
 # VITE_LOGIN_WITH_DEVDEBUG gates the demo/dev-debug login UI at build time
-# (see code/webapp/src/components/dev/dev-login-enabled.ts). Default false —
-# the release-build workflow (#633) passes `true` explicitly only for the
-# `preview` target's build; `prod-cloudrun` never overrides it (TD-07).
+# (see code/webapp/src/components/dev/dev-login-enabled.ts). isDevLoginEnabled()
+# also requires VITE_APP_ENV to appear in VITE_DEV_LOGIN_ALLOWED_ENVIRONMENTS —
+# all three are Vite build-time constants, so a later deploy's runtime env vars
+# cannot repair a build that only set VITE_LOGIN_WITH_DEVDEBUG. Defaults are all
+# inert (false / production / empty) — the release-build workflow (#633) passes
+# all three explicitly only for the `preview` target's build; `prod-cloudrun`
+# never overrides them (TD-07).
 FROM npm_deps AS node_builder
 ARG API_URL
 ARG VITE_LOGIN_WITH_DEVDEBUG=false
+ARG VITE_APP_ENV=production
+ARG VITE_DEV_LOGIN_ALLOWED_ENVIRONMENTS=""
 ENV VITE_API_URL=${API_URL}
 ENV VITE_LOGIN_WITH_DEVDEBUG=${VITE_LOGIN_WITH_DEVDEBUG}
+ENV VITE_APP_ENV=${VITE_APP_ENV}
+ENV VITE_DEV_LOGIN_ALLOWED_ENVIRONMENTS=${VITE_DEV_LOGIN_ALLOWED_ENVIRONMENTS}
 COPY ./code/webapp /webapp
 RUN npm run generate
 RUN npm run build
