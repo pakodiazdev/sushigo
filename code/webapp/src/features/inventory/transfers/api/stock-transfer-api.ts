@@ -1,8 +1,20 @@
 import { apiClient } from '@/lib/api-client'
 import type { EntityResponse, PaginatedResponse } from '@/types/inventory'
-import type { StockTransfer, StockTransferListParams, StockTransferSummary } from '../types'
+import type {
+  StockTransfer,
+  StockTransferLinePreview,
+  StockTransferListParams,
+  StockTransferSummary,
+} from '../types'
 
 export interface StockTransferLinePayload {
+  item_variant_id: string
+  entry_uom_id: string
+  entry_quantity: number
+}
+
+export interface StockTransferLinePreviewPayload {
+  source_location_id: string
   item_variant_id: string
   entry_uom_id: string
   entry_quantity: number
@@ -37,4 +49,12 @@ export const stockTransferApi = {
 
   reverse: (transferId: string, data?: { reason?: string | null }) =>
     apiClient.post<EntityResponse<StockTransfer>>(`/inventory/transfers/${transferId}/reverse`, data),
+
+  /**
+   * Non-mutating source-availability + base-UOM preview for one line (#613).
+   * Same payload shape as a create/update line, plus the transfer's own
+   * `source_location_id`.
+   */
+  preview: (data: StockTransferLinePreviewPayload) =>
+    apiClient.post<EntityResponse<StockTransferLinePreview>>('/inventory/transfers/preview', data),
 }

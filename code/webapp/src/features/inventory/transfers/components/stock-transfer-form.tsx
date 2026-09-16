@@ -1,4 +1,4 @@
-import { Loader2, Plus, Trash2 } from 'lucide-react'
+import { Loader2, Plus } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
 import { FormField, Select, Textarea } from '@/components/ui/form-fields'
@@ -10,6 +10,7 @@ import { fetchAllPages } from '@/lib/fetch-all-pages'
 import { variantAssignmentApi, variantAssignmentQueryKeys } from '@/features/inventory/assignments'
 import type { PaginatedResponse, UnitOfMeasure } from '@/types/inventory'
 import { useStockTransferForm } from '../hooks/use-stock-transfer-form'
+import { StockTransferLineFields } from './stock-transfer-line-fields'
 import type { StockTransfer } from '../types'
 
 interface StockTransferFormProps {
@@ -161,10 +162,12 @@ export function StockTransferForm({ transfer, onSuccess, onCancel }: Readonly<St
 
           {fields.map((field, index) => {
             const lineErrors = errors.lines?.[index]
-            // Live registered value — not `field.*` from useFieldArray, which is a
+            // Live registered values — not `field.*` from useFieldArray, which is a
             // stale snapshot that still holds the previous variant/label after
             // onDestinationChange clears the value.
             const currentVariantId = watch(`lines.${index}.item_variant_id`)
+            const currentUomId = watch(`lines.${index}.entry_uom_id`)
+            const currentQuantity = watch(`lines.${index}.entry_quantity`)
             // Prefer the client (zod) error, fall back to the server's specific
             // 422 field message so an out-of-range quantity or a UOM with no
             // conversion isn't reduced to just the generic toast.
@@ -172,69 +175,26 @@ export function StockTransferForm({ transfer, onSuccess, onCancel }: Readonly<St
             const uomError = lineErrors?.entry_uom_id?.message ?? validationErrors?.[`lines.${index}.entry_uom_id`]
             const quantityError = lineErrors?.entry_quantity?.message ?? validationErrors?.[`lines.${index}.entry_quantity`]
             return (
-              <div key={field.id} className="space-y-3 rounded-md border border-border p-3">
-                <div className="flex items-center justify-between">
-                  <p className="text-xs font-medium text-muted-foreground">Línea {index + 1}</p>
-                  {fields.length > 1 && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      aria-label={`Quitar línea ${index + 1}`}
-                      onClick={() => removeLine(index)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
-
-                <FormField label="Variante" required error={variantError}>
-                  <Select
-                    aria-label={`Variante línea ${index + 1}`}
-                    error={Boolean(variantError)}
-                    disabled={!destinationLocationId}
-                    {...register(`lines.${index}.item_variant_id`)}
-                  >
-                    <option value="">Selecciona una variante</option>
-                    {field._label &&
-                      currentVariantId === field.item_variant_id &&
-                      !selectableVariants.some((row) => row.item_variant_id === currentVariantId) && (
-                        <option value={field.item_variant_id}>{field._label}</option>
-                      )}
-                    {selectableVariants.map((row) => (
-                      <option key={row.item_variant_id} value={row.item_variant_id}>
-                        {row.item_variant_name} ({row.item_variant_code})
-                      </option>
-                    ))}
-                  </Select>
-                </FormField>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField label="Unidad" required error={uomError}>
-                    <Select
-                      aria-label={`Unidad línea ${index + 1}`}
-                      error={Boolean(uomError)}
-                      {...register(`lines.${index}.entry_uom_id`)}
-                    >
-                      <option value="">Selecciona una unidad</option>
-                      {uoms.map((uom) => (
-                        <option key={uom.id} value={uom.id}>{uom.code} — {uom.name}</option>
-                      ))}
-                    </Select>
-                  </FormField>
-
-                  <FormField label="Cantidad" required error={quantityError}>
-                    <Input
-                      aria-label={`Cantidad línea ${index + 1}`}
-                      type="number"
-                      step="any"
-                      min="0"
-                      error={Boolean(quantityError)}
-                      {...register(`lines.${index}.entry_quantity`, { valueAsNumber: true })}
-                    />
-                  </FormField>
-                </div>
-              </div>
+              <StockTransferLineFields
+                key={field.id}
+                index={index}
+                fieldId={field.id}
+                fieldLabel={field._label}
+                fieldVariantId={field.item_variant_id}
+                currentVariantId={currentVariantId}
+                entryUomId={currentUomId}
+                entryQuantity={currentQuantity}
+                sourceLocationId={sourceLocationId}
+                destinationLocationId={destinationLocationId}
+                register={register}
+                variantError={variantError}
+                uomError={uomError}
+                quantityError={quantityError}
+                uoms={uoms}
+                selectableVariants={selectableVariants}
+                canRemove={fields.length > 1}
+                onRemove={() => removeLine(index)}
+              />
             )
           })}
         </div>

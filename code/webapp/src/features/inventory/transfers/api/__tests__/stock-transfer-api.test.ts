@@ -81,4 +81,17 @@ describe('stockTransferApi', () => {
     stockTransferApi.reverse('tr-ulid', { reason: 'Error' })
     expect(apiClient.post).toHaveBeenCalledWith('/inventory/transfers/tr-ulid/reverse', { reason: 'Error' })
   })
+
+  it('previews a line without touching any transfer id', () => {
+    const payload = {
+      source_location_id: 'src',
+      item_variant_id: 'v1',
+      entry_uom_id: 'u1',
+      entry_quantity: 12,
+    }
+
+    stockTransferApi.preview(payload)
+
+    expect(apiClient.post).toHaveBeenCalledWith('/inventory/transfers/preview', payload)
+  })
 })

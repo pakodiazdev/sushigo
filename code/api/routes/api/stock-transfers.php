@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\V1\Inventory\StockTransfer\CreateStockTransferContr
 use App\Http\Controllers\Api\V1\Inventory\StockTransfer\DeleteStockTransferController;
 use App\Http\Controllers\Api\V1\Inventory\StockTransfer\ListStockTransfersController;
 use App\Http\Controllers\Api\V1\Inventory\StockTransfer\PostStockTransferController;
+use App\Http\Controllers\Api\V1\Inventory\StockTransfer\PreviewStockTransferLineController;
 use App\Http\Controllers\Api\V1\Inventory\StockTransfer\ReverseStockTransferController;
 use App\Http\Controllers\Api\V1\Inventory\StockTransfer\ShowStockTransferController;
 use App\Http\Controllers\Api\V1\Inventory\StockTransfer\UpdateStockTransferController;
@@ -15,6 +16,7 @@ Route::middleware('auth:api')
     ->group(function () {
         Route::get('/', ListStockTransfersController::class)->name('stock-transfers.list')->middleware('permission:stock.view');
         Route::post('/', CreateStockTransferController::class)->name('stock-transfers.create')->middleware('permission:stock.manage');
+        Route::post('preview', PreviewStockTransferLineController::class)->name('stock-transfers.preview')->middleware('permission:stock.manage');
 
         Route::prefix('{transfer}')->group(function () {
             Route::get('/', ShowStockTransferController::class)->name('stock-transfers.show')->middleware('permission:stock.view');
