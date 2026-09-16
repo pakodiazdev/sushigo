@@ -70,6 +70,11 @@ class PreviewStockTransferLineRequest extends FormRequest
         ];
     }
 
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(fn (Validator $validator) => $this->validateEntryConversion($validator));
+    }
+
     /**
      * Mirrors `StockTransferRequest::validateUomConversion()` for this single
      * flat line (#613): the entry UOM must convert to the Variant's base UOM,
@@ -78,44 +83,40 @@ class PreviewStockTransferLineRequest extends FormRequest
      * per line, so a preview never accepts a quantity the real endpoint would
      * reject.
      */
-    public function withValidator(Validator $validator): void
+    private function validateEntryConversion(Validator $validator): void
     {
-        $validator->after(function (Validator $validator): void {
-            if (
-                $validator->errors()->has('item_variant_id')
-                || $validator->errors()->has('entry_uom_id')
-                || $validator->errors()->has('entry_quantity')
-            ) {
-                return;
-            }
+        if (
+            $validator->errors()->has('item_variant_id')
+            || $validator->errors()->has('entry_uom_id')
+            || $validator->errors()->has('entry_quantity')
+        ) {
+            return;
+        }
 
-            $variantBaseUomId = ItemVariant::where('public_id', $this->input('item_variant_id'))->value('uom_id');
-            $entryUomId = UnitOfMeasure::where('public_id', $this->input('entry_uom_id'))->value('id');
+        $variantBaseUomId = ItemVariant::where('public_id', $this->input('item_variant_id'))->value('uom_id');
+        $entryUomId = UnitOfMeasure::where('public_id', $this->input('entry_uom_id'))->value('id');
 
-            if ($variantBaseUomId === null || $entryUomId === null) {
-                return;
-            }
+        if ($variantBaseUomId === null || $entryUomId === null) {
+            return;
+        }
 
-            $entryQuantity = (float) $this->input('entry_quantity', 0);
+        $entryQuantity = (float) $this->input('entry_quantity', 0);
 
-            if ((int) $variantBaseUomId === (int) $entryUomId) {
-                $this->assertBaseQuantityRepresentable($validator, 'entry_quantity', $entryQuantity);
+        if ((int) $variantBaseUomId === (int) $entryUomId) {
+            $this->assertBaseQuantityRepresentable($validator, 'entry_quantity', $entryQuantity);
 
-                return;
-            }
+            return;
+        }
 
-            $factor = $this->assertConversionFactorUsable(
-                $validator,
-                'entry_uom_id',
-                $this->resolveConversionFactor((int) $entryUomId, (int) $variantBaseUomId),
-            );
+        $factor = $this->assertConversionFactorUsable(
+            $validator,
+            'entry_uom_id',
+            $this->resolveConversionFactor((int) $entryUomId, (int) $variantBaseUomId),
+        );
 
-            if ($factor === null) {
-                return;
-            }
-
+        if ($factor !== null) {
             $this->assertBaseQuantityRepresentable($validator, 'entry_quantity', $entryQuantity * $factor);
-        });
+        }
     }
 
     public function previewData(): PreviewStockTransferLineData
