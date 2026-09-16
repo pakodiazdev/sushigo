@@ -67,11 +67,11 @@ describe('Products — Progressive create → detail SlidePanel', () => {
     // Scoped to the form — the page behind the SlidePanel also has Brand/Category
     // <select> filters, so an unscoped cy.get('select') would hit the wrong ones.
     cy.get('form').within(() => {
-      cy.get('input[placeholder="e.g., Coca-Cola Original 600 ml"]').type('Cypress Soda 600 ml', {
+      cy.get('input[placeholder="Ej. Coca-Cola Original 600 ml"]').type('Cypress Soda 600 ml', {
         force: true,
       })
       cy.get('select').first().select(CATEGORY_NAME)
-      cy.contains('button', 'Create Product').scrollIntoView().click({ force: true })
+      cy.contains('button', 'Crear Producto').scrollIntoView().click({ force: true })
     })
 
     // ── 3. Confirm the same panel instance transitioned in place to the saved detail —

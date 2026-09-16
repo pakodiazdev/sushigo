@@ -35,12 +35,12 @@ describe('Item Rápido — SKU sugerido', () => {
 
     cy.contains(/Sugerencia automática a partir del nombre/).should('be.visible')
 
-    cy.get('input[placeholder="e.g., Fresh Salmon"]').type(itemName, { force: true })
+    cy.get('input[placeholder="Ej. Salmón Fresco"]').type(itemName, { force: true })
 
     // The suggestion request is debounced — wait for the SKU field to fill itself.
-    cy.get('input[placeholder="e.g., SAL-001"]', { timeout: 10_000 }).should('have.value', expectedSku)
+    cy.get('input[placeholder="Ej. SAL-001"]', { timeout: 10_000 }).should('have.value', expectedSku)
 
-    cy.contains('button', 'Create Item').scrollIntoView().click({ force: true })
+    cy.contains('button', 'Crear Insumo').scrollIntoView().click({ force: true })
 
     cy.contains('Item created successfully', { timeout: 10_000 }).should('be.visible')
     cy.contains(expectedSku, { timeout: 10_000 }).should('be.visible')

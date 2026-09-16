@@ -15,7 +15,7 @@ import type {
 // backend) — kept in the schema so the field can still be displayed/validated uniformly across
 // assign and edit modes, but never sent on update (see submitPayload below).
 const presentationSchema = z.object({
-  template_id: z.string().min(1, 'Template is required'),
+  template_id: z.string().min(1, 'La plantilla es requerida'),
   package_barcode: z.string(),
   is_default: z.boolean(),
   is_active: z.boolean(),

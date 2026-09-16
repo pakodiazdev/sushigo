@@ -32,17 +32,17 @@ export function ProductForm({ product, onSuccess, onCancel }: Readonly<ProductFo
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="flex h-full flex-col">
       <SlidePanel.Body className="flex-1 space-y-6">
-        <FormField label="Product Name" required error={allErrors.name}>
+        <FormField label="Nombre del Producto" required error={allErrors.name}>
           <Input
             {...register('name')}
-            placeholder="e.g., Coca-Cola Original 600 ml"
+            placeholder="Ej. Coca-Cola Original 600 ml"
             error={!!allErrors.name}
           />
         </FormField>
 
-        <FormField label="Category" required error={allErrors.inventory_category_id}>
+        <FormField label="Categoría" required error={allErrors.inventory_category_id}>
           <Select {...register('inventory_category_id')} error={!!allErrors.inventory_category_id}>
-            <option value="">Select a category…</option>
+            <option value="">Selecciona una categoría…</option>
             {categories.map((category) => (
               <option key={category.id} value={category.id}>
                 {category.name}
@@ -51,9 +51,9 @@ export function ProductForm({ product, onSuccess, onCancel }: Readonly<ProductFo
           </Select>
         </FormField>
 
-        <FormField label="Brand" error={allErrors.brand_id}>
+        <FormField label="Marca" error={allErrors.brand_id}>
           <Select {...register('brand_id')} error={!!allErrors.brand_id}>
-            <option value="">No brand</option>
+            <option value="">Sin marca</option>
             {brands.map((brand) => (
               <option key={brand.id} value={brand.id}>
                 {brand.name}
@@ -62,8 +62,8 @@ export function ProductForm({ product, onSuccess, onCancel }: Readonly<ProductFo
           </Select>
         </FormField>
 
-        <FormField label="Description">
-          <Textarea {...register('description')} rows={3} placeholder="Optional notes…" />
+        <FormField label="Descripción">
+          <Textarea {...register('description')} rows={3} placeholder="Notas opcionales…" />
         </FormField>
 
         {isEditing ? (
@@ -71,12 +71,12 @@ export function ProductForm({ product, onSuccess, onCancel }: Readonly<ProductFo
           // showing it here (with no way to see what's about to be replaced) risks silently
           // detaching the product's existing photo. Mirrors ItemForm/DishForm's identical
           // restriction.
-          <FormField label="Photos">
+          <FormField label="Fotos">
             <p className="text-sm text-muted-foreground">
-              Photo management for existing products isn&apos;t available yet — this form has
-              no way to show the photos this product already has, so uploading here would
-              replace them without warning. This will be enabled once the backend can list a
-              product&apos;s existing gallery.
+              La gestión de fotos para productos existentes aún no está disponible — este
+              formulario no tiene forma de mostrar las fotos que ya tiene este producto, por lo
+              que subir una aquí las reemplazaría sin advertencia. Esto se habilitará cuando el
+              backend pueda listar la galería existente de un producto.
             </p>
           </FormField>
         ) : (
@@ -96,20 +96,20 @@ export function ProductForm({ product, onSuccess, onCancel }: Readonly<ProductFo
           id="product-is-active"
           checked={isActive}
           onChange={(e) => setValue('is_active', e.target.checked)}
-          label="Active"
+          label="Activo"
         />
       </SlidePanel.Body>
 
       <SlidePanel.Footer>
         <div className="flex justify-end space-x-3">
           <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
-            Cancel
+            Cancelar
           </Button>
           <Button type="submit" disabled={isSubmitDisabled}>
             {/* isSubmitting only, not isSubmitDisabled: the button is also disabled while the
                 uploader has an unresolved error, and nothing is actually in flight then. */}
             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {isEditing ? 'Update' : 'Create'} Product
+            {isEditing ? 'Actualizar' : 'Crear'} Producto
           </Button>
         </div>
       </SlidePanel.Footer>

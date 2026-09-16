@@ -22,22 +22,22 @@ export function PriceListForm({ priceList, onSuccess, onCancel }: Readonly<Price
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="flex h-full flex-col">
       <SlidePanel.Body className="flex-1 space-y-6">
-        <FormField label="Code" required error={allErrors.code}>
-          <Input {...register('code')} placeholder="e.g., STANDARD" error={!!allErrors.code} />
+        <FormField label="Código" required error={allErrors.code}>
+          <Input {...register('code')} placeholder="Ej. STANDARD" error={!!allErrors.code} />
         </FormField>
 
-        <FormField label="Name" required error={allErrors.name}>
-          <Input {...register('name')} placeholder="e.g., Standard Pricing" error={!!allErrors.name} />
+        <FormField label="Nombre" required error={allErrors.name}>
+          <Input {...register('name')} placeholder="Ej. Precios Estándar" error={!!allErrors.name} />
         </FormField>
 
-        <FormField label="Description">
-          <Textarea {...register('description')} rows={3} placeholder="Optional notes…" />
+        <FormField label="Descripción">
+          <Textarea {...register('description')} rows={3} placeholder="Notas opcionales…" />
         </FormField>
 
         <FormField
-          label="Priority"
+          label="Prioridad"
           error={allErrors.priority}
-          hint="Tiebreaker when multiple active lists resolve for the same context — higher wins"
+          hint="Criterio de desempate cuando varias listas activas resuelven para el mismo contexto — gana la mayor"
         >
           <Input
             type="number"
@@ -50,18 +50,18 @@ export function PriceListForm({ priceList, onSuccess, onCancel }: Readonly<Price
           id="price-list-is-active"
           checked={isActive}
           onChange={(e) => setValue('is_active', e.target.checked)}
-          label="Active"
+          label="Activa"
         />
       </SlidePanel.Body>
 
       <SlidePanel.Footer>
         <div className="flex justify-end space-x-3">
           <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
-            Cancel
+            Cancelar
           </Button>
           <Button type="submit" disabled={isSubmitting}>
             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {isEditing ? 'Update' : 'Create'} Price List
+            {isEditing ? 'Actualizar' : 'Crear'} Lista de Precios
           </Button>
         </div>
       </SlidePanel.Footer>

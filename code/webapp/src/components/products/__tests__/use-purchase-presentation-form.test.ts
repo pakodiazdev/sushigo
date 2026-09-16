@@ -284,7 +284,7 @@ describe('usePurchasePresentationForm', () => {
     })
 
     expect(variantPurchasePresentationApi.create).not.toHaveBeenCalled()
-    expect(result.current.allErrors.template_id).toBe('Template is required')
+    expect(result.current.allErrors.template_id).toBe('La plantilla es requerida')
   })
 
   it('surfaces server-side validation errors (e.g. duplicate assignment race) without resetting the form', async () => {

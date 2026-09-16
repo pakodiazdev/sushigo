@@ -6,10 +6,10 @@ import { priceListApi } from '../api/pricing-api'
 import type { PriceList } from '../types'
 
 const priceListSchema = z.object({
-  code: z.string().trim().min(1, 'Code is required').max(50, 'Code must be at most 50 characters'),
-  name: z.string().trim().min(1, 'Name is required').max(255, 'Name must be at most 255 characters'),
+  code: z.string().trim().min(1, 'El código es requerido').max(50, 'El código no puede exceder 50 caracteres'),
+  name: z.string().trim().min(1, 'El nombre es requerido').max(255, 'El nombre no puede exceder 255 caracteres'),
   description: z.string(),
-  priority: z.number().int('Priority must be a whole number'),
+  priority: z.number().int('La prioridad debe ser un número entero'),
   is_active: z.boolean(),
 })
 

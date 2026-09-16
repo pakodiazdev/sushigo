@@ -42,19 +42,19 @@ export function ItemForm({ item, onSuccess, onCancel }: Readonly<ItemFormProps>)
     <form onSubmit={handleSubmit(onSubmit)} className="flex h-full flex-col">
       <SlidePanel.Body className="flex-1 space-y-6">
         <FormField
-          label="SKU (Stock Keeping Unit)"
+          label="SKU (Unidad de Mantenimiento de Stock)"
           required
           error={allErrors.sku}
           hint={
             isEditing
-              ? 'Unique identifier for this item'
+              ? 'Identificador único de este insumo'
               : 'Sugerencia automática a partir del nombre; puedes modificarla.'
           }
         >
           <div className="flex items-center gap-2">
             <Input
               {...skuField}
-              placeholder="e.g., SAL-001"
+              placeholder="Ej. SAL-001"
               error={!!allErrors.sku}
               disabled={isEditing}
               className="flex-1"
@@ -101,19 +101,19 @@ export function ItemForm({ item, onSuccess, onCancel }: Readonly<ItemFormProps>)
           )}
         </FormField>
 
-        <FormField label="Item Name" required error={allErrors.name}>
+        <FormField label="Nombre del Insumo" required error={allErrors.name}>
           <Input
             {...register('name')}
-            placeholder="e.g., Fresh Salmon"
+            placeholder="Ej. Salmón Fresco"
             error={!!allErrors.name}
           />
         </FormField>
 
-        <FormField label="Description">
+        <FormField label="Descripción">
           <Textarea
             {...register('description')}
             rows={3}
-            placeholder="Additional description or notes"
+            placeholder="Descripción o notas adicionales"
           />
         </FormField>
 
@@ -127,12 +127,12 @@ export function ItemForm({ item, onSuccess, onCancel }: Readonly<ItemFormProps>)
           // here (with no way to see what's about to be replaced) is not a risk worth taking for
           // a real restaurant's menu photos; hide it until the backend can list a gallery's
           // existing assets.
-          <FormField label="Photos">
+          <FormField label="Fotos">
             <p className="text-sm text-muted-foreground">
-              Photo management for existing items isn&apos;t available yet — this form has no way
-              to show the photos this item already has, so uploading here would replace them
-              without warning. This will be enabled once the backend can list an item&apos;s
-              existing gallery.
+              La gestión de fotos para insumos existentes aún no está disponible — este formulario
+              no tiene forma de mostrar las fotos que ya tiene este insumo, por lo que subir una
+              aquí las reemplazaría sin advertencia. Esto se habilitará cuando el backend pueda
+              listar la galería existente de un insumo.
             </p>
           </FormField>
         ) : (
@@ -149,24 +149,24 @@ export function ItemForm({ item, onSuccess, onCancel }: Readonly<ItemFormProps>)
         )}
 
         <div className="space-y-3 rounded-lg border border-gray-200 p-4">
-          <h4 className="text-sm font-medium text-gray-900">Item Properties</h4>
+          <h4 className="text-sm font-medium text-gray-900">Propiedades del Insumo</h4>
 
           <Checkbox
             checked={isStocked}
             onChange={(e) => setValue('is_stocked', e.target.checked)}
-            label="Track inventory for this item"
+            label="Llevar control de existencias para este insumo"
           />
 
           <Checkbox
             checked={isPerishable}
             onChange={(e) => setValue('is_perishable', e.target.checked)}
-            label="Perishable (has expiration date)"
+            label="Perecedero (tiene fecha de caducidad)"
           />
 
           <Checkbox
             checked={isActive}
             onChange={(e) => setValue('is_active', e.target.checked)}
-            label="Active"
+            label="Activo"
           />
         </div>
       </SlidePanel.Body>
@@ -179,7 +179,7 @@ export function ItemForm({ item, onSuccess, onCancel }: Readonly<ItemFormProps>)
             onClick={onCancel}
             disabled={isSubmitting}
           >
-            Cancel
+            Cancelar
           </Button>
           <Button type="submit" disabled={isSubmitDisabled}>
             {/* isSubmitting only, not isSubmitDisabled: the button is also disabled while the
@@ -187,7 +187,7 @@ export function ItemForm({ item, onSuccess, onCancel }: Readonly<ItemFormProps>)
                 actually in flight then — spinning in that state falsely tells the user the item
                 is being saved when the real next step is dismissing the error banner. */}
             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {isEditing ? 'Update' : 'Create'} Item
+            {isEditing ? 'Actualizar' : 'Crear'} Insumo
           </Button>
         </div>
       </SlidePanel.Footer>

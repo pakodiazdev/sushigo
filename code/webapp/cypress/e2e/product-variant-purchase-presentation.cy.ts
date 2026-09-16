@@ -181,9 +181,9 @@ describe('Variant detail — Purchase Presentation lifecycle', () => {
 
     cy.get('form').within(() => {
       cy.get('select').select(`${TEMPLATE_NAME} (BOX · ×24)`)
-      cy.get('input[placeholder*="unit barcode"]').type(PACKAGE_BARCODE, { force: true })
-      cy.contains('label', 'Default presentation for this Variant').click()
-      cy.contains('button', 'Assign Presentation').scrollIntoView().click({ force: true })
+      cy.get('input[placeholder*="código de barras propio de la variante"]').type(PACKAGE_BARCODE, { force: true })
+      cy.contains('label', 'Presentación predeterminada para esta variante').click()
+      cy.contains('button', 'Asignar Presentación').scrollIntoView().click({ force: true })
     })
 
     // ── 3. Confirm the panel transitioned back to Variant detail, showing it ──
@@ -198,8 +198,8 @@ describe('Variant detail — Purchase Presentation lifecycle', () => {
     cy.contains('h2', 'Editar presentación de compra', { timeout: 10_000 }).should('be.visible')
     // Template is read-only in edit mode — no selector for it.
     cy.get('form').find('select').should('not.exist')
-    cy.contains('label', 'Active').click()
-    cy.contains('button', 'Save Presentation').scrollIntoView().click({ force: true })
+    cy.contains('label', 'Activa').click()
+    cy.contains('button', 'Guardar Presentación').scrollIntoView().click({ force: true })
 
     cy.contains('Purchase Presentation updated successfully', { timeout: 10_000 }).should('be.visible')
     cy.contains('h2', 'Detalle de la variante', { timeout: 10_000 }).should('be.visible')
@@ -210,8 +210,8 @@ describe('Variant detail — Purchase Presentation lifecycle', () => {
     // ── 5. Reactivate it ─────────────────────────────────────────────────────
     cy.contains(TEMPLATE_NAME).click()
     cy.contains('h2', 'Editar presentación de compra', { timeout: 10_000 }).should('be.visible')
-    cy.contains('label', 'Active').click()
-    cy.contains('button', 'Save Presentation').scrollIntoView().click({ force: true })
+    cy.contains('label', 'Activa').click()
+    cy.contains('button', 'Guardar Presentación').scrollIntoView().click({ force: true })
 
     cy.contains('Purchase Presentation updated successfully', { timeout: 10_000 }).should('be.visible')
     cy.contains('h2', 'Detalle de la variante', { timeout: 10_000 }).should('be.visible')

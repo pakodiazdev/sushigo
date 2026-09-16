@@ -195,10 +195,10 @@ describe('Price Lists management', () => {
     cy.contains('h2', 'Nueva lista de precios', { timeout: 10_000 }).should('be.visible')
 
     cy.get('form').within(() => {
-      cy.get('input[placeholder="e.g., STANDARD"]').type(branchPriceListCode)
-      cy.get('input[placeholder="e.g., Standard Pricing"]').type(BRANCH_PRICE_LIST_NAME)
+      cy.get('input[placeholder="Ej. STANDARD"]').type(branchPriceListCode)
+      cy.get('input[placeholder="Ej. Precios Estándar"]').type(BRANCH_PRICE_LIST_NAME)
     })
-    clickButton('Create Price List')
+    clickButton('Crear Lista de Precios')
 
     cy.contains('Price List created successfully', { timeout: 10_000 }).should('be.visible')
     cy.contains('h2', 'Detalle de la lista de precios', { timeout: 10_000 }).should('be.visible')
@@ -212,7 +212,7 @@ describe('Price Lists management', () => {
       cy.get('select').eq(0).select(BRANCH_NAME)
       cy.setDateInput('input[type="date"]', EFFECTIVE_FROM)
     })
-    clickButton('Create Assignment')
+    clickButton('Crear Asignación')
 
     cy.contains('Assignment created successfully', { timeout: 10_000 }).should('be.visible')
     cy.contains('h2', 'Detalle de la lista de precios', { timeout: 10_000 }).should('be.visible')
@@ -227,10 +227,10 @@ describe('Price Lists management', () => {
       // wait for the target option to actually render before selecting it.
       cy.get('select', { timeout: 10_000 }).should('contain.text', VARIANT_OPTION_TEXT)
       cy.get('select').select(VARIANT_OPTION_TEXT)
-      cy.get('input[placeholder="e.g., 129.5000"]').type(BRANCH_PRICE)
+      cy.get('input[placeholder="Ej. 129.5000"]').type(BRANCH_PRICE)
       cy.setDateInput('input[type="date"]', EFFECTIVE_FROM)
     })
-    clickButton('Create Price')
+    clickButton('Crear Precio')
 
     cy.contains('Variant Price created successfully', { timeout: 10_000 }).should('be.visible')
     cy.contains('h2', 'Detalle de la lista de precios', { timeout: 10_000 }).should('be.visible')
@@ -243,15 +243,15 @@ describe('Price Lists management', () => {
     cy.get('form').within(() => {
       cy.get('select', { timeout: 10_000 }).should('contain.text', VARIANT_OPTION_TEXT)
       cy.get('select').select(VARIANT_OPTION_TEXT)
-      cy.get('input[placeholder="e.g., 129.5000"]').type('999.0000')
+      cy.get('input[placeholder="Ej. 129.5000"]').type('999.0000')
       cy.setDateInput('input[type="date"]', EFFECTIVE_FROM)
     })
-    clickButton('Create Price')
+    clickButton('Crear Precio')
 
     // Rejected, not silently saved — the create form stays open with the conflict visible.
     cy.contains(/Ya existe un precio activo/, { timeout: 10_000 }).should('be.visible')
     cy.contains('h2', 'Precio de variante', { timeout: 10_000 }).should('be.visible')
-    clickButton('Cancel')
+    clickButton('Cancelar')
     cy.contains('h2', 'Detalle de la lista de precios', { timeout: 10_000 }).should('be.visible')
     // Only the original price is on the list — the rejected 999.0000 never landed.
     cy.contains('999.0000').should('not.exist')
@@ -266,11 +266,11 @@ describe('Price Lists management', () => {
     cy.contains('h2', 'Nueva lista de precios', { timeout: 10_000 }).should('be.visible')
 
     cy.get('form').within(() => {
-      cy.get('input[placeholder="e.g., STANDARD"]').type(unitPriceListCode)
-      cy.get('input[placeholder="e.g., Standard Pricing"]').type(UNIT_PRICE_LIST_NAME)
+      cy.get('input[placeholder="Ej. STANDARD"]').type(unitPriceListCode)
+      cy.get('input[placeholder="Ej. Precios Estándar"]').type(UNIT_PRICE_LIST_NAME)
       cy.get('input[type="number"]').clear().type('10')
     })
-    clickButton('Create Price List')
+    clickButton('Crear Lista de Precios')
 
     cy.contains('Price List created successfully', { timeout: 10_000 }).should('be.visible')
     cy.contains('h2', 'Detalle de la lista de precios', { timeout: 10_000 }).should('be.visible')
@@ -284,7 +284,7 @@ describe('Price Lists management', () => {
       cy.get('select').eq(1).select(OPERATING_UNIT_NAME)
       cy.setDateInput('input[type="date"]', EFFECTIVE_FROM)
     })
-    clickButton('Create Assignment')
+    clickButton('Crear Asignación')
 
     cy.contains('Assignment created successfully', { timeout: 10_000 }).should('be.visible')
     cy.contains('h2', 'Detalle de la lista de precios', { timeout: 10_000 }).should('be.visible')
@@ -297,10 +297,10 @@ describe('Price Lists management', () => {
     cy.get('form').within(() => {
       cy.get('select', { timeout: 10_000 }).should('contain.text', VARIANT_OPTION_TEXT)
       cy.get('select').select(VARIANT_OPTION_TEXT)
-      cy.get('input[placeholder="e.g., 129.5000"]').type(UNIT_PRICE)
+      cy.get('input[placeholder="Ej. 129.5000"]').type(UNIT_PRICE)
       cy.setDateInput('input[type="date"]', EFFECTIVE_FROM)
     })
-    clickButton('Create Price')
+    clickButton('Crear Precio')
 
     cy.contains('Variant Price created successfully', { timeout: 10_000 }).should('be.visible')
     cy.contains('h2', 'Detalle de la lista de precios', { timeout: 10_000 }).should('be.visible')

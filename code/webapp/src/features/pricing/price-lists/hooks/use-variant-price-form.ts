@@ -7,20 +7,20 @@ import type { VariantPrice } from '../types'
 
 const variantPriceSchema = z
   .object({
-    item_variant_id: z.string().min(1, 'Product Variant is required'),
+    item_variant_id: z.string().min(1, 'La variante del producto es requerida'),
     // decimal(15,4): kept as a string end-to-end so it round-trips exactly (see
     // StoreVariantPriceRequest's own comment on this column) — validated as a numeric string
     // here rather than coerced to a JS number, which would reintroduce float rounding.
     price: z
       .string()
-      .min(1, 'Price is required')
-      .regex(/^\d+(\.\d{1,4})?$/, 'Price must be a positive number with up to 4 decimal places'),
-    effective_from: z.string().min(1, 'Effective from is required'),
+      .min(1, 'El precio es requerido')
+      .regex(/^\d+(\.\d{1,4})?$/, 'El precio debe ser un número positivo con hasta 4 decimales'),
+    effective_from: z.string().min(1, 'La fecha de vigencia desde es requerida'),
     effective_to: z.string(),
     is_active: z.boolean(),
   })
   .refine((data) => !data.effective_to || data.effective_to >= data.effective_from, {
-    message: 'Effective to must be on or after effective from',
+    message: 'La fecha de vigencia hasta debe ser igual o posterior a la de inicio',
     path: ['effective_to'],
   })
 

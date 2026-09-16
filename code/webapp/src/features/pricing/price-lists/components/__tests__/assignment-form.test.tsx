@@ -95,7 +95,7 @@ describe('AssignmentForm', () => {
     const { getByText, getByTestId } = render(
       <AssignmentForm priceListId="pl-1" onSuccess={vi.fn()} onCancel={vi.fn()} />
     )
-    expect(getByText('Create Assignment')).toBeDefined()
+    expect(getByText('Crear Asignación')).toBeDefined()
     expect(getByTestId('branch-context-picker').dataset.disabled).toBe('false')
   })
 
@@ -104,7 +104,7 @@ describe('AssignmentForm', () => {
     const { getByText, getByTestId } = render(
       <AssignmentForm priceListId="pl-1" assignment={existingAssignment} onSuccess={vi.fn()} onCancel={vi.fn()} />
     )
-    expect(getByText('Update Assignment')).toBeDefined()
+    expect(getByText('Actualizar Asignación')).toBeDefined()
     expect(getByTestId('branch-context-picker').dataset.disabled).toBe('true')
   })
 
@@ -124,7 +124,7 @@ describe('AssignmentForm', () => {
     setHookState()
     const onCancel = vi.fn()
     const { getByText } = render(<AssignmentForm priceListId="pl-1" onSuccess={vi.fn()} onCancel={onCancel} />)
-    fireEvent.click(getByText('Cancel'))
+    fireEvent.click(getByText('Cancelar'))
     expect(onCancel).toHaveBeenCalledTimes(1)
   })
 
@@ -136,9 +136,9 @@ describe('AssignmentForm', () => {
   })
 
   it('surfaces field errors', () => {
-    setHookState({ allErrors: { effective_from: 'Effective from is required' } })
+    setHookState({ allErrors: { effective_from: 'La fecha de vigencia desde es requerida' } })
     const { getByText } = render(<AssignmentForm priceListId="pl-1" onSuccess={vi.fn()} onCancel={vi.fn()} />)
-    expect(getByText('Effective from is required')).toBeDefined()
+    expect(getByText('La fecha de vigencia desde es requerida')).toBeDefined()
   })
 
   it('wires the branch/operating-unit picker into setValue', () => {
@@ -153,14 +153,14 @@ describe('AssignmentForm', () => {
   it('wires the Active checkbox into setValue', () => {
     setHookState()
     const { getByLabelText } = render(<AssignmentForm priceListId="pl-1" onSuccess={vi.fn()} onCancel={vi.fn()} />)
-    fireEvent.click(getByLabelText('Active'))
+    fireEvent.click(getByLabelText('Activa'))
     expect(mockSetValue).toHaveBeenCalledWith('is_active', false)
   })
 
   it('does not render a Delete button in create mode', () => {
     setHookState()
     const { queryByText } = render(<AssignmentForm priceListId="pl-1" onSuccess={vi.fn()} onCancel={vi.fn()} />)
-    expect(queryByText('Delete')).toBeNull()
+    expect(queryByText('Eliminar')).toBeNull()
   })
 
   it('calls handleDelete when Delete is clicked in edit mode', () => {
@@ -169,7 +169,7 @@ describe('AssignmentForm', () => {
     const { getByText } = render(
       <AssignmentForm priceListId="pl-1" assignment={existingAssignment} onSuccess={vi.fn()} onCancel={vi.fn()} />
     )
-    fireEvent.click(getByText('Delete'))
+    fireEvent.click(getByText('Eliminar'))
     expect(handleDelete).toHaveBeenCalledTimes(1)
   })
 })
