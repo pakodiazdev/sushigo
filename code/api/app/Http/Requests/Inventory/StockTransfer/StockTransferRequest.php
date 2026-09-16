@@ -8,10 +8,10 @@ use App\DataTransferObjects\Inventory\SaveStockTransferData;
 use App\DataTransferObjects\Inventory\StockTransferLineData;
 use App\Http\Requests\Inventory\StockTransfer\Concerns\ScopesLocationToAccessibleUnits;
 use App\Http\Requests\Inventory\StockTransfer\Concerns\SharesStockTransferValidationMessages;
+use App\Http\Requests\Inventory\StockTransfer\Concerns\ValidatesConvertedTransferQuantity;
 use App\Models\InventoryLocation;
 use App\Models\ItemVariant;
 use App\Models\UnitOfMeasure;
-use App\Models\UomConversion;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -20,20 +20,7 @@ abstract class StockTransferRequest extends FormRequest
 {
     use ScopesLocationToAccessibleUnits;
     use SharesStockTransferValidationMessages;
-
-    /**
-     * The smallest and largest values `decimal(15,4)` (11 integer digits, 4
-     * fractional) can hold. `entry_quantity` and the derived `base_quantity`
-     * both use that column type with a `> 0` CHECK, so a value outside this
-     * band reaches PostgreSQL as an out-of-range numeric / a zero-rounding
-     * CHECK violation and surfaces as a 500 rather than a 422.
-     */
-    private const MIN_STORABLE_QTY = 0.0001;
-
-    private const MAX_STORABLE_QTY = '99999999999.9999';
-
-    /** Smallest positive value retained by the decimal(15,6) factor snapshots. */
-    private const MIN_STORABLE_CONVERSION_FACTOR = 0.000001;
+    use ValidatesConvertedTransferQuantity;
 
     public function authorize(): bool
     {
@@ -147,7 +134,7 @@ abstract class StockTransferRequest extends FormRequest
         $entryQuantity = (float) ($line['entry_quantity'] ?? 0);
 
         if ((int) $variantBaseUomId === (int) $entryUomId) {
-            $this->assertBaseQuantityRepresentable($validator, $index, $entryQuantity);
+            $this->assertBaseQuantityRepresentable($validator, "lines.{$index}.entry_quantity", $entryQuantity);
 
             return;
         }
@@ -173,76 +160,17 @@ abstract class StockTransferRequest extends FormRequest
         int $entryUomId,
         int $variantBaseUomId,
     ): void {
-        $factor = $this->resolveConversionFactor($entryUomId, $variantBaseUomId);
+        $factor = $this->assertConversionFactorUsable(
+            $validator,
+            "lines.{$index}.entry_uom_id",
+            $this->resolveConversionFactor($entryUomId, $variantBaseUomId),
+        );
 
         if ($factor === null) {
-            $validator->errors()->add(
-                "lines.{$index}.entry_uom_id",
-                'No existe una conversión activa entre la unidad de medida y la unidad base de la variante.'
-            );
-
             return;
         }
 
-        if ($factor < self::MIN_STORABLE_CONVERSION_FACTOR) {
-            $validator->errors()->add(
-                "lines.{$index}.entry_uom_id",
-                'El factor de conversión es demasiado pequeño para registrarse con la precisión disponible.'
-            );
-
-            return;
-        }
-
-        $this->assertBaseQuantityRepresentable($validator, $index, $entryQuantity * $factor);
-    }
-
-    /**
-     * The active entry→base factor: a direct `UomConversion.factor`, or the
-     * reciprocal of an inverse one. Null when neither direction exists. Mirrors
-     * `App\Services\Inventory\Concerns\ConvertsUomQuantities::getConversion()`.
-     */
-    private function resolveConversionFactor(int $fromUomId, int $toUomId): ?float
-    {
-        $direct = UomConversion::query()
-            ->where('is_active', true)
-            ->where('from_uom_id', $fromUomId)
-            ->where('to_uom_id', $toUomId)
-            ->value('factor');
-
-        if ($direct !== null) {
-            return (float) $direct;
-        }
-
-        $inverse = UomConversion::query()
-            ->where('is_active', true)
-            ->where('from_uom_id', $toUomId)
-            ->where('to_uom_id', $fromUomId)
-            ->value('factor');
-
-        return ($inverse !== null && (float) $inverse != 0.0)
-            ? round(1 / (float) $inverse, 6)
-            : null;
-    }
-
-    private function assertBaseQuantityRepresentable(Validator $validator, string $index, float $baseQuantity): void
-    {
-        $rounded = round($baseQuantity, 4);
-
-        if ($rounded < self::MIN_STORABLE_QTY) {
-            $validator->errors()->add(
-                "lines.{$index}.entry_quantity",
-                'La cantidad convertida a la unidad base es demasiado pequeña para registrarse (mínimo 0.0001).'
-            );
-
-            return;
-        }
-
-        if ($rounded > self::MAX_STORABLE_QTY) {
-            $validator->errors()->add(
-                "lines.{$index}.entry_quantity",
-                'La cantidad convertida a la unidad base excede el máximo que puede registrarse.'
-            );
-        }
+        $this->assertBaseQuantityRepresentable($validator, "lines.{$index}.entry_quantity", $entryQuantity * $factor);
     }
 
     public function transferData(): SaveStockTransferData
