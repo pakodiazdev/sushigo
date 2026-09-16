@@ -2,6 +2,7 @@
 
 namespace App\Services\Inventory;
 
+use App\DataTransferObjects\Inventory\PreviewStockTransferLineData;
 use App\DataTransferObjects\Inventory\SaveStockTransferData;
 use App\DataTransferObjects\Inventory\StockTransferLineData;
 use App\Exceptions\InvalidStockBalanceException;
@@ -16,9 +17,11 @@ use App\Exceptions\StockTransferReversalBoundaryException;
 use App\Exceptions\StockTransferValueOutOfRangeException;
 use App\Exceptions\StockTransferVariantNotAssignedException;
 use App\Exceptions\StockTransferVariantUnavailableException;
+use App\Exceptions\UomConversionNotFoundException;
 use App\Models\InventoryLocation;
 use App\Models\ItemVariant;
 use App\Models\OperatingUnit;
+use App\Models\Stock;
 use App\Models\StockMovement;
 use App\Models\StockMovementLine;
 use App\Models\StockTransfer;
@@ -29,6 +32,7 @@ use App\Models\VariantLocationAssignment;
 use App\Services\Inventory\Concerns\ConvertsUomQuantities;
 use App\Support\Access\OperatingUnitScope;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Creates/edits draft internal Stock Transfers and posts/reverses them
@@ -260,6 +264,66 @@ class StockTransferService
 
             return $this->freshTransfer($transfer);
         });
+    }
+
+    /**
+     * Non-authoritative preview of a Stock Transfer line (#613): the source
+     * Location's current on-hand/reserved/available for this Variant, plus
+     * the normalized base-UOM quantity the line would move if posted — the
+     * exact conversion createLine() uses, but read-only. A single plain
+     * `Stock` lookup (no lock, no write, no N+1); a Variant with no Stock row
+     * at this Location is a valid "nothing on hand" case, not an error. The
+     * authoritative check still happens under
+     * lockAffectedStockDeterministically() at post time, so a concurrent
+     * change between preview and post is expected, not a defect here.
+     *
+     * @return array{
+     *     source_on_hand: float,
+     *     source_reserved: float,
+     *     source_available: float,
+     *     entry_quantity: float,
+     *     entry_uom: string,
+     *     base_quantity: float,
+     *     base_uom: string,
+     *     conversion_applies: bool,
+     *     conversion_factor: float,
+     * }
+     *
+     * @throws ValidationException when no UOM conversion path exists to the Variant's base UOM
+     */
+    public function previewLine(PreviewStockTransferLineData $data): array
+    {
+        $variant = ItemVariant::with('unitOfMeasure')->findOrFail($data->itemVariantId);
+        $entryUom = UnitOfMeasure::findOrFail($data->entryUomId);
+
+        try {
+            [$baseQuantity, $conversionFactor] = $this->convertToBaseQuantity(
+                $data->entryQuantity,
+                $data->entryUomId,
+                $variant,
+                $entryUom,
+                lockConversion: false,
+            );
+        } catch (UomConversionNotFoundException $e) {
+            throw ValidationException::withMessages(['entry_uom_id' => $e->getMessage()]);
+        }
+
+        $stock = Stock::query()
+            ->where('inventory_location_id', $data->sourceLocationId)
+            ->where('item_variant_id', $data->itemVariantId)
+            ->first();
+
+        return [
+            'source_on_hand' => (float) ($stock->on_hand ?? 0),
+            'source_reserved' => (float) ($stock->reserved ?? 0),
+            'source_available' => (float) ($stock->available ?? 0),
+            'entry_quantity' => $data->entryQuantity,
+            'entry_uom' => $entryUom->code,
+            'base_quantity' => round($baseQuantity, 4),
+            'base_uom' => $variant->unitOfMeasure->code,
+            'conversion_applies' => $data->entryUomId !== $variant->uom_id,
+            'conversion_factor' => $conversionFactor,
+        ];
     }
 
     private function createLine(StockTransfer $transfer, StockTransferLineData $lineData): StockTransferLine

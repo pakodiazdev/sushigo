@@ -1419,7 +1419,7 @@ sequenceDiagram
 | Concern | Decision |
 |---|---|
 | Entities | `StockTransfer` (document header) + `StockTransferLine` (one moved Variant per line); both carry a public ULID. A `StockMovement` stays a single Variant/quantity ledger row — the Transfer is the multi-line header. |
-| Endpoints | `GET /api/v1/inventory/transfers` (paginated summary list) · `GET /inventory/transfers/{transfer}` · `POST /inventory/transfers` · `PUT /inventory/transfers/{transfer}` (draft only) · `DELETE /inventory/transfers/{transfer}` (draft only) · `POST /inventory/transfers/{transfer}/post` · `POST /inventory/transfers/{transfer}/reverse`. SAC controllers. |
+| Endpoints | `GET /api/v1/inventory/transfers` (paginated summary list) · `GET /inventory/transfers/{transfer}` · `POST /inventory/transfers` · `PUT /inventory/transfers/{transfer}` (draft only) · `DELETE /inventory/transfers/{transfer}` (draft only) · `POST /inventory/transfers/{transfer}/post` · `POST /inventory/transfers/{transfer}/reverse` · `POST /inventory/transfers/preview` (#613, non-mutating). SAC controllers. |
 | Permission | `stock.view` for reads, `stock.manage` for writes — no dedicated permission, mirroring the movement ledger and assignment contracts. |
 | Operating Unit scope | `OperatingUnitScope::constrainStockTransfers()` scopes the list to Transfers touching *either* accessible endpoint; `assertCanAccessStockTransfer()` guards `show`. Every mutation (`update`/`delete`/`post`/`reverse`) asserts access to **both** endpoint units independently — before the transaction on the route-bound model, and again under the header row lock. `super-admin`/`admin` bypass. |
 | Lifecycle | `DRAFT → POSTED → REVERSED`. Saving/editing a `DRAFT` changes no Stock. |
@@ -1428,6 +1428,7 @@ sequenceDiagram
 | Idempotency | A line whose `TRANSFER` movement already exists (same `related_*`, `POSTED`) is skipped, so a retried/replayed post never moves it twice; the header lock serialises concurrent posts, and a second one gets `409` already-posted. |
 | Cost policy | Source WAC is never changed on post or reversal (see §3.9). |
 | Reversal | Each line's posted `TRANSFER` movement is compensated through the shared `StockMovementReverser` (§4.3) — destination unwound, source restored, original flipped to `REVERSED`, compensating movement causally linked. Rejected with `409` when the destination Stock has fallen below the transferred quantity (the documented reversal boundary), or when already reversed / never posted. |
+| Availability preview | `POST /inventory/transfers/preview` (#613) — non-authoritative: a single plain `Stock` read (no lock, no write) for the source Location + Variant, plus the same entry→base conversion `createLine()` uses. The line editor shows it as an indicative on-hand/available figure and normalized base-UOM quantity; the authoritative check still happens under lock at post time, so a concurrent change between preview and post is expected, not a defect. |
 | Navigation | `Inventario > Transferencias` → `/inventario/transferencias`, gated by `stock.view`; create/edit/post/reverse gated by `stock.manage`. |
 
 ---
