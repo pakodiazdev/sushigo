@@ -93,3 +93,20 @@ export interface StockTransferListParams {
   date_to?: string
   search?: string
 }
+
+/**
+ * Non-authoritative source-availability preview for one Stock Transfer line
+ * (#613), returned by `POST /inventory/transfers/preview`. Indicative only —
+ * the authoritative check happens under lock at post time.
+ */
+export interface StockTransferLinePreview {
+  source_on_hand: number
+  source_reserved: number
+  source_available: number
+  entry_quantity: number
+  entry_uom: string
+  base_quantity: number
+  base_uom: string
+  conversion_applies: boolean
+  conversion_factor: number
+}
