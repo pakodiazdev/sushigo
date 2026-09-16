@@ -104,6 +104,44 @@ describe('useStockTransferLinePreview', () => {
     expect(result.current.previewLoading).toBe(true)
   })
 
+  it('refetches instead of serving a stale cached value when the same line is previewed again', async () => {
+    // Same QueryClient across both mounts, with the app's own 5-minute
+    // default staleTime (App.tsx) — this is what makes a stale-cache hit
+    // possible in the first place (e.g. reopening the transfer form) unless
+    // this query overrides it. A QueryClient with no explicit staleTime
+    // default (like makeWrapper()'s) would pass this test even without the
+    // hook's own override, since react-query's library default is already 0.
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false, staleTime: 5 * 60 * 1000 } },
+    })
+    const Wrapper = ({ children }: { children: React.ReactNode }) =>
+      React.createElement(QueryClientProvider, { client }, children)
+    const props = {
+      sourceLocationId: 'loc-1',
+      itemVariantId: 'var-1',
+      entryUomId: 'uom-gr',
+      entryQuantity: 25000,
+    }
+
+    const first = renderHook(() => useStockTransferLinePreview(props), { wrapper: Wrapper })
+    await waitFor(() => expect(first.result.current.preview).toEqual(PREVIEW), { timeout: 2000 })
+    first.unmount()
+
+    // A movement elsewhere changed the source balance between the two mounts;
+    // the query key is identical, so a stale-cache read would silently show
+    // the previous figures instead of asking the API again.
+    vi.mocked(stockTransferApi.preview).mockResolvedValueOnce({
+      data: { status: 200, data: { ...PREVIEW, source_available: 10 } },
+    } as never)
+
+    const second = renderHook(() => useStockTransferLinePreview(props), { wrapper: Wrapper })
+    await waitFor(
+      () => expect(second.result.current.preview).toEqual({ ...PREVIEW, source_available: 10 }),
+      { timeout: 2000 }
+    )
+    expect(stockTransferApi.preview).toHaveBeenCalledTimes(2)
+  })
+
   it('surfaces an API error as previewErrorMessage', async () => {
     vi.mocked(stockTransferApi.preview).mockRejectedValue(new Error('boom'))
     const Wrapper = makeWrapper()

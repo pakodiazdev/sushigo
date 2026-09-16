@@ -195,6 +195,61 @@ class StockTransferPreviewTest extends InventoryTestCase
     }
 
     #[Test]
+    public function it_rejects_a_quantity_that_exceeds_the_ledger_decimal_range_matching_the_create_endpoint(): void
+    {
+        $payload = [
+            'source_location_id' => $this->location->public_id,
+            'item_variant_id' => $this->variant->public_id,
+            'entry_uom_id' => $this->uomKg->public_id,
+            // decimal(15,4) has eleven integer digits.
+            'entry_quantity' => 100_000_000_000,
+        ];
+
+        $this->postJson('/api/v1/inventory/transfers/preview', $payload)
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['entry_quantity']);
+
+        $this->postJson('/api/v1/inventory/transfers', [
+            'source_location_id' => $this->location->public_id,
+            'destination_location_id' => $this->destination->public_id,
+            'transfer_date' => '2026-09-15',
+            'lines' => [[
+                'item_variant_id' => $this->variant->public_id,
+                'entry_uom_id' => $this->uomKg->public_id,
+                'entry_quantity' => 100_000_000_000,
+            ]],
+        ])->assertStatus(422)->assertJsonValidationErrors(['lines.0.entry_quantity']);
+    }
+
+    #[Test]
+    public function it_rejects_a_converted_base_quantity_that_rounds_to_zero_matching_the_create_endpoint(): void
+    {
+        // 0.01 GR at the 0.001 GR->KG factor is 0.00001 KG, which rounds to
+        // 0.0000 in the ledger's decimal(15,4).
+        $payload = [
+            'source_location_id' => $this->location->public_id,
+            'item_variant_id' => $this->variant->public_id,
+            'entry_uom_id' => $this->uomGr->public_id,
+            'entry_quantity' => 0.01,
+        ];
+
+        $this->postJson('/api/v1/inventory/transfers/preview', $payload)
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['entry_quantity']);
+
+        $this->postJson('/api/v1/inventory/transfers', [
+            'source_location_id' => $this->location->public_id,
+            'destination_location_id' => $this->destination->public_id,
+            'transfer_date' => '2026-09-15',
+            'lines' => [[
+                'item_variant_id' => $this->variant->public_id,
+                'entry_uom_id' => $this->uomGr->public_id,
+                'entry_quantity' => 0.01,
+            ]],
+        ])->assertStatus(422)->assertJsonValidationErrors(['lines.0.entry_quantity']);
+    }
+
+    #[Test]
     public function it_forbids_a_preview_without_stock_manage(): void
     {
         $this->user->removeRole('inventory-manager');

@@ -46,6 +46,13 @@ export function useStockTransferLinePreview({
     ],
     enabled: previewEnabled,
     retry: false,
+    // Bypass the app's global 5-minute staleTime (#613): this reads a live
+    // Stock balance, and nothing invalidates this query's own namespace when
+    // a Transfer posts/reverses (those only invalidate the Existencias
+    // dashboard's own query keys). Without this, reopening the form on the
+    // same Location/Variant/UOM/quantity within that window could silently
+    // show a pre-movement figure from the cache instead of a fresh read.
+    staleTime: 0,
     queryFn: async () => {
       const response = await stockTransferApi.preview({
         source_location_id: sourceLocationId,
