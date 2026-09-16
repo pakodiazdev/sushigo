@@ -76,14 +76,33 @@ COPY ./code/webapp/package.json ./code/webapp/package-lock.json ./
 RUN npm ci
 
 # Stage para hacer build del frontend
+#
+# VITE_LOGIN_WITH_DEVDEBUG gates the demo/dev-debug login UI at build time
+# (see code/webapp/src/components/dev/dev-login-enabled.ts). isDevLoginEnabled()
+# also requires VITE_APP_ENV to appear in VITE_DEV_LOGIN_ALLOWED_ENVIRONMENTS —
+# all three are Vite build-time constants, so a later deploy's runtime env vars
+# cannot repair a build that only set VITE_LOGIN_WITH_DEVDEBUG. Defaults are all
+# inert (false / production / empty) — the release-build workflow (#633) passes
+# all three explicitly only for the `preview` target's build; `prod-cloudrun`
+# never overrides them (TD-07).
 FROM npm_deps AS node_builder
 ARG API_URL
+ARG VITE_LOGIN_WITH_DEVDEBUG=false
+ARG VITE_APP_ENV=production
+ARG VITE_DEV_LOGIN_ALLOWED_ENVIRONMENTS=""
 ENV VITE_API_URL=${API_URL}
+ENV VITE_LOGIN_WITH_DEVDEBUG=${VITE_LOGIN_WITH_DEVDEBUG}
+ENV VITE_APP_ENV=${VITE_APP_ENV}
+ENV VITE_DEV_LOGIN_ALLOWED_ENVIRONMENTS=${VITE_DEV_LOGIN_ALLOWED_ENVIRONMENTS}
 COPY ./code/webapp /webapp
 RUN npm run generate
 RUN npm run build
 
-FROM base AS prod
+# Shared setup for both `prod` (full API tree — standalone Docker mode, and the base
+# `preview` extends) and `prod-cloudrun` (filtered API tree) — everything except the actual
+# API source copy, so neither target's image ever contains a layer built from the other's
+# API tree.
+FROM base AS prod_base
 
 # ARG APP_KEY
 ARG APP_ENV=production
@@ -116,7 +135,9 @@ RUN sed -ri -e 's!/var/www/html!/var/www/html/public!g' /etc/apache2/sites-avail
 # 2) Copiar dependencias de composer desde stage dedicado
 COPY --from=composer_deps /var/www/html/api/vendor /var/www/html/api/vendor
 
-# 3) App code
+FROM prod_base AS prod
+
+# 3) App code (full tree — this is the stage `preview` and docker-compose.prod.yml use)
 COPY ./code/api /var/www/html/api
 
 # 4) Permisos
@@ -136,6 +157,50 @@ RUN chown -R www-data:www-data /var/www/html/api \
 # para que usen las variables de entorno reales del runtime
 
 FROM prod AS preview
+
+COPY ./docker/app/config/preview/000-default.conf /etc/apache2/sites-available/000-default.conf
+
+COPY --from=node_builder /webapp/dist /var/www/html/webapp
+
+COPY ./docker/app/config/preview/entrypoint.sh /usr/local/bin/entrypoint.sh
+
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+CMD [ "bash", "/usr/local/bin/entrypoint.sh" ]
+
+# Filtered API source for prod-cloudrun, built as its own stage rather than a `RUN rm` on
+# top of `prod` (#633 review fix). `prod`'s own layer already contains the full,
+# unfiltered `COPY ./code/api` — a `RUN rm` in a stage FROM prod only adds an OCI whiteout
+# that hides the files from the *merged* filesystem view at runtime; the excluded paths
+# remain fully present and recoverable in prod's earlier layer, extractable by anyone who
+# can pull the published image (`docker save`, layer extraction, etc.), which does not
+# satisfy the physical-exclusion requirement in doc/conventions/ci/deployment.md.
+# `COPY --from=<stage>` copies filesystem *state*, not layer history, so files removed
+# here never occupy any layer in prod-cloudrun's own published image.
+FROM base AS prod_cloudrun_api_source
+
+COPY ./code/api /var/www/html/api
+
+RUN rm -rf \
+    /var/www/html/api/app/Http/Controllers/Api/V1/Dev \
+    /var/www/html/api/app/Support/DevLoginGuard.php \
+    /var/www/html/api/routes/api/dev.php
+
+# prod-cloudrun (#633, per TD-07): the hardened Cloud-Run-ready target for
+# Production. Built the same way `preview` is (webapp build, unified vhost,
+# Cloud Run entrypoint) but with the devdebug/demo-login code physically
+# removed — not merely disabled at runtime. This is defense in depth on top
+# of the existing runtime gates (environment() check, DevLoginGuard's
+# hard-fail on "production"), not a replacement for them.
+#
+# Deliberately built FROM prod_base, NOT FROM prod — see prod_cloudrun_api_source above for
+# why extending prod itself would not actually exclude anything from the published image.
+FROM prod_base AS prod-cloudrun
+
+COPY --from=prod_cloudrun_api_source /var/www/html/api /var/www/html/api
+
+RUN chown -R www-data:www-data /var/www/html/api \
+    && chmod -R 775 /var/www/html/api/storage /var/www/html/api/bootstrap/cache
 
 COPY ./docker/app/config/preview/000-default.conf /etc/apache2/sites-available/000-default.conf
 

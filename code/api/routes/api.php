@@ -1,50 +1,16 @@
 <?php
 
-use App\Contracts\PasswordResetTokenRecorder;
-use App\Http\Controllers\Api\V1\Dev\DevLoginController;
-use App\Http\Controllers\Api\V1\Dev\ListDevUsersController;
-use App\Http\Controllers\Api\V1\Devtools\GetClockController;
-use App\Http\Controllers\Api\V1\Devtools\ResetClockController;
-use App\Http\Controllers\Api\V1\Devtools\SeedPayrollController;
-use App\Http\Controllers\Api\V1\Devtools\SetClockController;
-use App\Http\Controllers\Api\V1\Devtools\ShiftClockController;
 use Illuminate\Support\Facades\Route;
 
-// ── Test-only routes (never exposed in production) ───────────────────────
-if (app()->environment('testing', 'local', 'dev', 'devtest')) {
-    Route::prefix('v1/test')->name('test.')->group(function () {
-        Route::get('reset-link/{email}', function (string $email) {
-            $recorder = app(PasswordResetTokenRecorder::class);
-            $link = $recorder->retrieve($email);
-
-            if (! $link) {
-                return response()->json(['link' => null], 404);
-            }
-
-            return response()->json(['link' => $link]);
-        })->name('reset-link');
-    });
-
-    // ── Dev debug login routes ────────────────────────────────────────────
-    Route::prefix('v1/dev')->name('dev.')->group(function () {
-        Route::get('users', ListDevUsersController::class)->name('users');
-        Route::post('login', DevLoginController::class)->name('login');
-    });
-
-    // ── Devtools clock simulation routes ──────────────────────────────────
-    // Protected by ClockSimulationGuard (env check + feature flag)
-    Route::prefix('v1/devtools/clock')->name('devtools.clock.')->group(function () {
-        Route::get('/', GetClockController::class)->name('get');
-        Route::post('set', SetClockController::class)->name('set');
-        Route::post('shift', ShiftClockController::class)->name('shift');
-        Route::post('reset', ResetClockController::class)->name('reset');
-    });
-
-    // ── Devtools payroll seed route ────────────────────────────────────────
-    // Protected by PayrollSeedGuard (env check + feature flag)
-    Route::prefix('v1/devtools/payroll')->name('devtools.payroll.')->middleware('auth:api')->group(function () {
-        Route::post('seed', SeedPayrollController::class)->name('seed');
-    });
+// ── Test-only / dev-debug routes (never exposed in production) ───────────
+// Extracted to routes/api/dev.php (#633, per TD-07) so prod-cloudrun's Docker
+// build can physically remove that file. Unlike every other route group's
+// unconditional require below, this one must stay conditional on both the
+// environment() check AND file_exists() — prod-cloudrun's build removes
+// routes/api/dev.php entirely, and an unconditional require would fatal
+// `php artisan route:cache` at container boot.
+if (app()->environment('testing', 'local', 'dev', 'devtest') && file_exists(__DIR__.'/api/dev.php')) {
+    require __DIR__.'/api/dev.php';
 }
 
 // V1 API Routes — split by entity into routes/api/*.php to keep this group
