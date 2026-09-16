@@ -28,6 +28,12 @@ name: CI
 # surface's step order and quality logic isolated and reusable — they are NOT separate runs.
 # Branch protection requires only `ci-gate`. deploy-preview / update-iteration-progress /
 # wif-smoke-test stay independent (not PR validation).
+#
+# On a push to `main` only, once `ci-gate` is green, two more jobs run: `release-build-preview`
+# and `release-build-prod-cloudrun` (#633, per TD-07). Each calls the reusable
+# `_release-build.yml` once, building and pushing its own immutable, commit-SHA-tagged image to
+# Artifact Registry — never a shared universal image. Neither job can ever run for a PR, and
+# neither runs if `ci-gate` didn't pass.
 
 on:
   pull_request:
@@ -42,7 +48,12 @@ on:
 
 concurrency:
   group: ci-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  # PRs still cancel a superseded run (draft rapid-iteration is the whole point of that). A push
+  # to `main`, however, must never be cancelled mid-flight (#633): release-build-preview /
+  # release-build-prod-cloudrun share this same group, and a cancelled run can publish zero or
+  # one of the two per-target images instead of both, breaking the build-once-per-green-commit
+  # contract. Two overlapping pushes to main now queue sequentially instead.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   analyze-pr:
@@ -94,6 +105,7 @@ jobs:
               - '.github/workflows/_api-ci.yml'
               - '.github/workflows/_webapp-ci.yml'
               - '.github/workflows/_e2e-ci.yml'
+              - '.github/workflows/_release-build.yml'
               - '.github/scripts/ci-analyze/**'
             scripts:
               - '.github/scripts/**'
@@ -388,3 +400,50 @@ jobs:
             echo "::error::one or more applicable branches did not pass."
           fi
           exit $rc
+
+  # Builds and publishes the `preview`-target release image (#633, per TD-07) — the one Demo
+  # (#635) and QA's manual deploy-preview.yml both consume. Runs only on a push to `main`, only
+  # after `ci-gate` actually passed; never for a PR. A cancelled/skipped ci-gate is not success,
+  # so this never fires on anything less than a fully green gate.
+  release-build-preview:
+    name: release-build-preview
+    needs: ci-gate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.ci-gate.result == 'success'
+    permissions:
+      id-token: write
+      contents: read
+    uses: ./.github/workflows/_release-build.yml
+    with:
+      target: preview
+      image_name: ${{ vars.IMAGE_NAME_PREVIEW }}
+      login_with_devdebug: "true"
+      # vite_app_env / vite_dev_login_allowed_environments deliberately left at their inert
+      # defaults ("production" / ""), NOT "devtest" — correcting an earlier version of this
+      # comment that recommended it. No current backend APP_ENV value enables dev-login alone:
+      # routes/api/dev.php's single environment() check bundles dev-login with the /v1/test/*
+      # group (leaks password-reset links) and the devtools routes, and separately,
+      # SetTestTimeMiddleware (bootstrap/app.php, global) accepts X-Test-Time for
+      # devtest/testing/local regardless of the dev-login flag — so setting the public Demo
+      # backend's APP_ENV to any of those values exposes far more than the intended convenience
+      # login to every visitor. Until that backend gate is split to isolate dev-login from the
+      # testing utilities (tracked in doc/conventions/ci/deployment.md's deferred "Demo login UX"
+      # item), the frontend flag stays wired but inert here — do not "fix" this by picking a
+      # different single APP_ENV string without also doing that backend split.
+    secrets: inherit
+
+  # Builds and publishes the `prod-cloudrun`-target release image (#633, per TD-07) — the
+  # hardened, devdebug-free image Production (#636) consumes. Same gating as
+  # release-build-preview above; the two are independent parallel builds, not a chain.
+  release-build-prod-cloudrun:
+    name: release-build-prod-cloudrun
+    needs: ci-gate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.ci-gate.result == 'success'
+    permissions:
+      id-token: write
+      contents: read
+    uses: ./.github/workflows/_release-build.yml
+    with:
+      target: prod-cloudrun
+      image_name: ${{ vars.IMAGE_NAME_PROD }}
+      login_with_devdebug: "false"
+    secrets: inherit

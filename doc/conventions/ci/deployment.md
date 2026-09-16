@@ -313,20 +313,23 @@ needs a separately-planned maintenance procedure instead.
 These are named here so the issues that build the actual workflows (out of scope for TD-07 itself)
 have a concrete starting checklist:
 
-- [ ] Extract the inline dev-route block (`api.php` lines 13-48) into its own `routes/api/dev.php`
+- [x] Extract the inline dev-route block (`api.php` lines 13-48) into its own `routes/api/dev.php`
       — with a `file_exists()`-guarded conditional include, **not** the unconditional `require`
       pattern every other route group uses, so `prod-cloudrun`'s build (which removes the file)
-      doesn't crash route caching at Production startup.
-- [ ] Add a new `prod-cloudrun` Dockerfile stage (built the same way `preview` is — webapp copy,
+      doesn't crash route caching at Production startup. *(#633)*
+- [x] Add a new `prod-cloudrun` Dockerfile stage (built the same way `preview` is — webapp copy,
       unified vhost, Cloud Run entrypoint — do not retrofit the existing `prod` stage, which is
       API-only and not Cloud-Run-deployable) that excludes `routes/api/dev.php`,
       `app/Http/Controllers/Api/V1/Dev/`, and `app/Support/DevLoginGuard.php` from what it copies —
       `preview` keeps including them. Confirm the built image genuinely lacks the code (not just
-      lacks it being reachable) before wiring this to Production's deploy workflow.
-- [ ] Give `prod-cloudrun` and `preview` **separate `node_builder` frontend build stages**, each
+      lacks it being reachable) before wiring this to Production's deploy workflow. *(#633)*
+- [x] Give `prod-cloudrun` and `preview` **separate `node_builder` frontend build stages**, each
       setting `VITE_LOGIN_WITH_DEVDEBUG` accordingly — a shared webapp build ships Demo's login UI
       into Production's bundle (or drops it from Demo too), same hazard as the backend exclusion
-      above, just on the frontend side.
+      above, just on the frontend side. *(#633 — implemented as one parameterized `node_builder`
+      stage built via two separate `docker build --target` invocations, each passing its own
+      `VITE_LOGIN_WITH_DEVDEBUG` build-arg, rather than two duplicated stage definitions; same
+      per-target build isolation the item requires, see the release-build workflow's own note.)*
 - [ ] Add `--set-secrets`/`--update-secrets`/`--set-env-vars` mappings to every environment's
       deploy command (DB credentials, `APP_KEY`, `APP_URL`, and the OAuth key pair at the exact
       `/run/secrets/oauth_{private,public}/value.key` paths `entrypoint.sh` expects) — granting the
@@ -351,11 +354,14 @@ have a concrete starting checklist:
       secrets/variables (no required reviewers on any of them, per TD-07).
 - [ ] Point `demo.sushigo-romita.com` and `admin.sushigo-romita.com` at their respective Cloud Run
       services (domain mapping, same mechanism already used for `preview.sushigo-romita.com`).
-- [ ] Build the `sushigo-api-prod` and `sushigo-api-preview` build-and-push workflows (triggered on
-      `main`, distinct from the existing manual `deploy-preview.yml`, which keeps driving QA) and
-      the deploy-to-Demo / deploy-to-Production workflows.
-- [ ] Resolve each release's digest exactly once, in its build job, and thread it through as a job
+- [x] Build the `sushigo-api-prod` and `sushigo-api-preview` build-and-push workflows (triggered on
+      `main`, distinct from the existing manual `deploy-preview.yml`, which keeps driving QA) —
+      `_release-build.yml`, called from `ci.yml`'s `release-build-preview` /
+      `release-build-prod-cloudrun` jobs. *(#633)* The deploy-to-Demo / deploy-to-Production
+      workflows that consume each build's digest are still open (#635/#636).
+- [x] Resolve each release's digest exactly once, in its build job, and thread it through as a job
       output/artifact to that image's deploy job — do not let the deploy job re-resolve the tag.
+      *(#633 — `_release-build.yml`'s `digest` output; #635/#636 still need to actually consume it.)*
 - [ ] Give Demo's and Production's **full chains (migration + deploy)** their own `concurrency`
       group each (queued, not parallel) so two runs against the same environment never execute
       simultaneously — migration step included, not just deploy.
@@ -390,4 +396,42 @@ have a concrete starting checklist:
       "Internal / CI only" trust boundary this contract assigns to QA.
 - [ ] Design and build the Demo one-click/global-password login UX (product feature, not
       infrastructure — likely its own Sprint 009 issue), gated to compile only into the `preview`
-      target per "Two Docker build targets" above.
+      target per "Two Docker build targets" above. **Three blockers found while implementing #633
+      — this issue must fix all three, not just add the UX, or it will either silently regress
+      prod-cloudrun's exclusion boundary or over-expose the public Demo backend:**
+      1. `code/webapp/src/components/layout/Layout.tsx`'s `const devTools = import.meta.env.DEV ?
+         <DevDebugger /> : null` gates the entire feature on Vite's own dev-server flag, which is
+         always `false` for any `vite build` output — so `<DevDebugger />` (and everything it
+         imports) is dead-code-eliminated from **every** production bundle today, `preview`
+         included, regardless of `VITE_LOGIN_WITH_DEVDEBUG`/`VITE_APP_ENV`/
+         `VITE_DEV_LOGIN_ALLOWED_ENVIRONMENTS` (#633 wires all three correctly into the `preview`
+         target's build, verified empirically via `dist/assets/*.js`).
+      2. **Simply fixing (1) is not sufficient — verified empirically, do not assume otherwise.**
+         With Layout.tsx's gate bypassed and `VITE_LOGIN_WITH_DEVDEBUG=false` (prod-cloudrun's own
+         value), the built bundle still contains `/dev/users` and `/dev/login` — `use-dev-debugger.ts`
+         statically imports `listDevUsers`/`loginAs` from `dev-api.ts` as plain values (passed to
+         `useQuery`'s `queryFn` and called from `handleDevLogin`), so the runtime-false flag
+         prevents them from *firing* but not from being *bundled*: Rollup's tree-shaking can't prove
+         a statically-imported, still-referenced export is unreachable just because a boolean
+         happens to evaluate false at runtime. Fixing (1) naively (e.g. swapping `import.meta.env.DEV`
+         for `isDevLoginEnabled()` in the same unconditional `<DevDebugger />` reference) would make
+         `preview` work correctly but would also **reintroduce** this code into `prod-cloudrun`,
+         regressing the exclusion #633 currently only achieves as a side effect of blocker (1) still
+         being open. This issue needs a genuine build-time exclusion for `prod-cloudrun` specifically
+         — e.g. a lazy/dynamic `import()` boundary gated on a statically-analyzable
+         `VITE_LOGIN_WITH_DEVDEBUG` check, or excluding `src/components/dev/` from `prod-cloudrun`'s
+         frontend build context the same way #633 excludes the backend's `Dev/` controllers — not a
+         one-line conditional swap.
+      3. **No current backend `APP_ENV` value enables dev-login alone — do not set the public
+         Demo service's `APP_ENV` to `dev`/`devtest`/`testing`/`local` without first fixing this.**
+         `routes/api/dev.php`'s single `environment()` check (`api.php`'s wrapping condition)
+         bundles dev-login together with the `/v1/test/*` group (leaks password-reset links via
+         `/v1/test/reset-link/{email}`) and the `/v1/devtools/*` clock/payroll-seed routes — all
+         four register together or not at all. Separately, `SetTestTimeMiddleware`
+         (`bootstrap/app.php`, registered globally for every request) accepts an `X-Test-Time`
+         header and manipulates `Carbon::setTestNow()` for `devtest`/`testing`/`local`, entirely
+         independent of the dev-login feature flag. #633's release-build workflow deliberately
+         leaves `VITE_APP_ENV`/`VITE_DEV_LOGIN_ALLOWED_ENVIRONMENTS` at inert defaults for exactly
+         this reason (an earlier version recommended `devtest`, which was wrong — corrected after
+         review). This issue must split `routes/api/dev.php`'s guard so dev-login has its own,
+         narrower environment gate before Demo can safely set any backend value that activates it.
