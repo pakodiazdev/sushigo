@@ -101,7 +101,7 @@ describe('PurchasePresentationForm', () => {
       expect(getByText(/Box x24/)).toBeDefined()
     })
 
-    it('renders "Assign Presentation" as the submit label', () => {
+    it('renders "Asignar Presentación" as the submit label', () => {
       setHookState()
       const { getByText } = render(
         <PurchasePresentationForm
@@ -113,10 +113,10 @@ describe('PurchasePresentationForm', () => {
           onCancel={vi.fn()}
         />
       )
-      expect(getByText('Assign Presentation')).toBeDefined()
+      expect(getByText('Asignar Presentación')).toBeDefined()
     })
 
-    it('calls onCancel when Cancel is clicked', () => {
+    it('calls onCancel when Cancelar is clicked', () => {
       setHookState()
       const onCancel = vi.fn()
       const { getByText } = render(
@@ -129,7 +129,7 @@ describe('PurchasePresentationForm', () => {
           onCancel={onCancel}
         />
       )
-      fireEvent.click(getByText('Cancel'))
+      fireEvent.click(getByText('Cancelar'))
       expect(onCancel).toHaveBeenCalledTimes(1)
     })
 
@@ -194,8 +194,8 @@ describe('PurchasePresentationForm', () => {
           onCancel={vi.fn()}
         />
       )
-      expect(getByText(/doesn't match this Variant's base unit/)).toBeDefined()
-      expect((getByText('Assign Presentation').closest('button') as HTMLButtonElement).disabled).toBe(true)
+      expect(getByText(/no coincide con la unidad base de esta variante/)).toBeDefined()
+      expect((getByText('Asignar Presentación').closest('button') as HTMLButtonElement).disabled).toBe(true)
     })
 
     it('wires the Default checkbox into setValue', () => {
@@ -210,7 +210,7 @@ describe('PurchasePresentationForm', () => {
           onCancel={vi.fn()}
         />
       )
-      fireEvent.click(getByLabelText('Default presentation for this Variant'))
+      fireEvent.click(getByLabelText('Presentación predeterminada para esta variante'))
       expect(mockSetValue).toHaveBeenCalledWith('is_default', true)
     })
 
@@ -226,12 +226,12 @@ describe('PurchasePresentationForm', () => {
           onCancel={vi.fn()}
         />
       )
-      expect(queryByLabelText('Active')).toBeNull()
+      expect(queryByLabelText('Activa')).toBeNull()
     })
   })
 
   describe('edit mode', () => {
-    it('shows the template read-only, and "Save Presentation" as the submit label', () => {
+    it('shows the template read-only, and "Guardar Presentación" as the submit label', () => {
       setHookState({ isEditing: true })
       const { getByText, queryByRole } = render(
         <PurchasePresentationForm
@@ -245,7 +245,7 @@ describe('PurchasePresentationForm', () => {
         />
       )
       expect(getByText('Box x24')).toBeDefined()
-      expect(getByText('Save Presentation')).toBeDefined()
+      expect(getByText('Guardar Presentación')).toBeDefined()
       expect(queryByRole('combobox')).toBeNull()
     })
 
@@ -262,7 +262,7 @@ describe('PurchasePresentationForm', () => {
           onCancel={vi.fn()}
         />
       )
-      fireEvent.click(getByLabelText('Active'))
+      fireEvent.click(getByLabelText('Activa'))
       expect(mockSetValue).toHaveBeenCalledWith('is_active', false)
     })
   })

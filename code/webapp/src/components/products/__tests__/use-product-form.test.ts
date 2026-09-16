@@ -175,7 +175,7 @@ describe('useProductForm', () => {
     })
 
     expect(productApi.create).not.toHaveBeenCalled()
-    expect(result.current.allErrors.name).toBe('Name must be at least 2 characters')
+    expect(result.current.allErrors.name).toBe('El nombre debe tener al menos 2 caracteres')
   })
 
   it('requires a category', async () => {
@@ -193,7 +193,7 @@ describe('useProductForm', () => {
     })
 
     expect(productApi.create).not.toHaveBeenCalled()
-    expect(result.current.allErrors.inventory_category_id).toBe('Category is required')
+    expect(result.current.allErrors.inventory_category_id).toBe('La categoría es requerida')
   })
 
   it('creates the product on submit and calls onSuccess with the saved Product', async () => {

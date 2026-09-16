@@ -12,8 +12,8 @@ import type { Product } from '@/types/inventory'
 const productSchema = z.object({
   // .trim() runs before .min() — a whitespace-only name is normalized first so it's
   // judged on its real content length, matching the same fix on the Dish name field.
-  name: z.string().trim().min(2, 'Name must be at least 2 characters'),
-  inventory_category_id: z.string().min(1, 'Category is required'),
+  name: z.string().trim().min(2, 'El nombre debe tener al menos 2 caracteres'),
+  inventory_category_id: z.string().min(1, 'La categoría es requerida'),
   // Empty string means "no brand" — Brand is optional (arch doc §3.5).
   brand_id: z.string(),
   description: z.string(),

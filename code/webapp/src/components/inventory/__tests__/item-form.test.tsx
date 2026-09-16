@@ -142,7 +142,7 @@ describe('ItemForm', () => {
 
         it('renders SKU field', () => {
             const { getByPlaceholderText } = renderForm()
-            expect(getByPlaceholderText('e.g., SAL-001')).toBeDefined()
+            expect(getByPlaceholderText('Ej. SAL-001')).toBeDefined()
         })
 
         it('renders item name field', () => {
@@ -157,17 +157,17 @@ describe('ItemForm', () => {
 
         it('renders cancel button', () => {
             const { getByText } = renderForm()
-            expect(getByText('Cancel')).toBeDefined()
+            expect(getByText('Cancelar')).toBeDefined()
         })
 
         it('renders save button for new item', () => {
             const { getByText } = renderForm()
-            expect(getByText('Create Item')).toBeDefined()
+            expect(getByText('Crear Insumo')).toBeDefined()
         })
 
         it('renders update button when editing', () => {
             const { getByText } = renderForm({ item: editingItem })
-            expect(getByText('Update Item')).toBeDefined()
+            expect(getByText('Actualizar Insumo')).toBeDefined()
         })
     })
 
@@ -189,8 +189,8 @@ describe('ItemForm', () => {
 
         it('prefills the SKU field with the server suggestion once a name is typed', async () => {
             const { getByPlaceholderText } = renderForm()
-            const skuInput = getByPlaceholderText('e.g., SAL-001') as HTMLInputElement
-            const nameInput = getByPlaceholderText('e.g., Fresh Salmon')
+            const skuInput = getByPlaceholderText('Ej. SAL-001') as HTMLInputElement
+            const nameInput = getByPlaceholderText('Ej. Salmón Fresco')
 
             fireEvent.change(nameInput, { target: { value: 'Salmón fresco' } })
 
@@ -203,10 +203,10 @@ describe('ItemForm', () => {
                 response: { data: { rejected_sku: 'MINE-1', suggested_sku: 'SUG-002' } },
             })
             const { getByPlaceholderText, container, findByText } = renderForm()
-            const skuInput = getByPlaceholderText('e.g., SAL-001') as HTMLInputElement
+            const skuInput = getByPlaceholderText('Ej. SAL-001') as HTMLInputElement
 
             fireEvent.change(skuInput, { target: { value: 'MINE-1' } })
-            fireEvent.change(getByPlaceholderText('e.g., Fresh Salmon'), { target: { value: 'Salmón' } })
+            fireEvent.change(getByPlaceholderText('Ej. Salmón Fresco'), { target: { value: 'Salmón' } })
             fireEvent.submit(container.querySelector('form')!)
 
             expect(await findByText(/acaba de ser utilizado/)).toBeDefined()
@@ -221,7 +221,7 @@ describe('ItemForm', () => {
     describe('edit mode', () => {
         it('disables SKU field when editing', () => {
             const { getByPlaceholderText } = renderForm({ item: editingItem })
-            expect((getByPlaceholderText('e.g., SAL-001') as HTMLInputElement).disabled).toBe(true)
+            expect((getByPlaceholderText('Ej. SAL-001') as HTMLInputElement).disabled).toBe(true)
         })
 
         it('does not render the MediaGalleryUploader while editing', () => {
@@ -231,7 +231,7 @@ describe('ItemForm', () => {
 
         it('shows an explanatory note in place of the uploader', () => {
             const { getByText } = renderForm({ item: editingItem })
-            expect(getByText(/Photo management for existing items isn.t available yet/)).toBeDefined()
+            expect(getByText(/gestión de fotos para insumos existentes aún no está disponible/)).toBeDefined()
         })
 
         it('does not request a SKU suggestion in edit mode', async () => {
@@ -257,8 +257,8 @@ describe('ItemForm', () => {
         it('submits on a valid create', async () => {
             const { getByPlaceholderText, container } = renderForm()
 
-            fireEvent.change(getByPlaceholderText('e.g., SAL-001'), { target: { value: 'SA-001' } })
-            fireEvent.change(getByPlaceholderText('e.g., Fresh Salmon'), { target: { value: 'Salt Item' } })
+            fireEvent.change(getByPlaceholderText('Ej. SAL-001'), { target: { value: 'SA-001' } })
+            fireEvent.change(getByPlaceholderText('Ej. Salmón Fresco'), { target: { value: 'Salt Item' } })
             fireEvent.submit(container.querySelector('form')!)
 
             await waitFor(() => expect(mockMutateAsync).toHaveBeenCalled())
@@ -267,8 +267,8 @@ describe('ItemForm', () => {
         it('submits new items with type INSUMO by default', async () => {
             const { getByPlaceholderText, container } = renderForm()
 
-            fireEvent.change(getByPlaceholderText('e.g., SAL-001'), { target: { value: 'SA-001' } })
-            fireEvent.change(getByPlaceholderText('e.g., Fresh Salmon'), { target: { value: 'Salt Item' } })
+            fireEvent.change(getByPlaceholderText('Ej. SAL-001'), { target: { value: 'SA-001' } })
+            fireEvent.change(getByPlaceholderText('Ej. Salmón Fresco'), { target: { value: 'Salt Item' } })
             fireEvent.submit(container.querySelector('form')!)
 
             await waitFor(() =>
@@ -308,8 +308,8 @@ describe('ItemForm', () => {
         it('includes media_gallery_id and owner_token in the submitted payload once the uploader reports them', async () => {
             const { getByPlaceholderText, getByTestId, container } = renderForm()
 
-            fireEvent.change(getByPlaceholderText('e.g., SAL-001'), { target: { value: 'SA-001' } })
-            fireEvent.change(getByPlaceholderText('e.g., Fresh Salmon'), { target: { value: 'Salt Item' } })
+            fireEvent.change(getByPlaceholderText('Ej. SAL-001'), { target: { value: 'SA-001' } })
+            fireEvent.change(getByPlaceholderText('Ej. Salmón Fresco'), { target: { value: 'Salt Item' } })
             fireEvent.click(getByTestId('media-gallery-uploader-stub'))
             fireEvent.submit(container.querySelector('form')!)
 
@@ -327,7 +327,7 @@ describe('ItemForm', () => {
             fireEvent.click(getByTestId('media-gallery-uploader-busy-stub'))
 
             await waitFor(() => {
-                const submitButton = getByText('Create Item').closest('button') as HTMLButtonElement
+                const submitButton = getByText('Crear Insumo').closest('button') as HTMLButtonElement
                 expect(submitButton.disabled).toBe(true)
             })
         })
@@ -335,8 +335,8 @@ describe('ItemForm', () => {
         it('does not submit while the uploader is busy, even if the form is otherwise valid', async () => {
             const { getByPlaceholderText, getByTestId, container } = renderForm()
 
-            fireEvent.change(getByPlaceholderText('e.g., SAL-001'), { target: { value: 'SA-001' } })
-            fireEvent.change(getByPlaceholderText('e.g., Fresh Salmon'), { target: { value: 'Salt Item' } })
+            fireEvent.change(getByPlaceholderText('Ej. SAL-001'), { target: { value: 'SA-001' } })
+            fireEvent.change(getByPlaceholderText('Ej. Salmón Fresco'), { target: { value: 'Salt Item' } })
             fireEvent.click(getByTestId('media-gallery-uploader-busy-stub'))
 
             await waitFor(() => {

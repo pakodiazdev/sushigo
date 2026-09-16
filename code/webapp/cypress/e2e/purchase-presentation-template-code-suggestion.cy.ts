@@ -31,9 +31,9 @@ describe('Código semántico de plantilla de presentación', () => {
     // currently quarantined by #547 because they do not appear in this embedded list.
     cy.contains('button', 'Nuevo producto', { timeout: 10_000 }).click({ force: true })
     cy.get('form').within(() => {
-      cy.get('input[placeholder="e.g., Coca-Cola Original 600 ml"]').type(productName, { force: true })
+      cy.get('input[placeholder="Ej. Coca-Cola Original 600 ml"]').type(productName, { force: true })
       cy.get('select').first().select('Categoría Código Semántico', { force: true })
-      cy.contains('button', 'Create Product').scrollIntoView().click({ force: true })
+      cy.contains('button', 'Crear Producto').scrollIntoView().click({ force: true })
     })
     cy.contains('Product created successfully', { timeout: 10_000 }).should('be.visible')
     cy.contains('button', 'Nueva variante').click({ force: true })

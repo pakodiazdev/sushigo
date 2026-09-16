@@ -44,8 +44,8 @@ describe('Item Rápido — Media Gallery Uploader', () => {
     cy.contains('button', 'Item Rápido').click()
 
     // ── 2. Fill in the basic item fields ─────────────────────────────────
-    cy.get('input[placeholder="e.g., SAL-001"]').type(sku, { force: true })
-    cy.get('input[placeholder="e.g., Fresh Salmon"]').type('Cypress Media Item', { force: true })
+    cy.get('input[placeholder="Ej. SAL-001"]').type(sku, { force: true })
+    cy.get('input[placeholder="Ej. Salmón Fresco"]').type('Cypress Media Item', { force: true })
 
     // ── 3. Upload a photo via the MediaGalleryUploader ───────────────────
     cy.get('[data-testid="media-uploader-input"]').selectFile('cypress/fixtures/media/sample-photo.jpg', {
@@ -57,13 +57,13 @@ describe('Item Rápido — Media Gallery Uploader', () => {
     cy.contains('Primary').should('be.visible')
 
     // ── 4. Save the item ──────────────────────────────────────────────────
-    // "Create Item" is disabled (isSubmitDisabled) while MediaGalleryUploader reports itself
+    // "Crear Insumo" is disabled (isSubmitDisabled) while MediaGalleryUploader reports itself
     // busy. onBusyChange(false) only fires from an effect that runs a render *after* the
     // thumbnail + "Primary" badge mount, so clicking the instant the badge shows raced that
     // still-disabled window — onSubmit's `if (isSubmitDisabled) return` guard then silently
     // dropped the submit (no POST /items, "Item created successfully" never appeared). Assert
     // the button is actually enabled and let Cypress's own actionability retry wait it out.
-    cy.contains('button', 'Create Item').scrollIntoView().should('not.be.disabled').click()
+    cy.contains('button', 'Crear Insumo').scrollIntoView().should('not.be.disabled').click()
 
     // ── 5. Confirm the item was created ───────────────────────────────────
     cy.contains('Item created successfully', { timeout: 10_000 }).should('be.visible')

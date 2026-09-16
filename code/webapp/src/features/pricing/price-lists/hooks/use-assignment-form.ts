@@ -7,14 +7,14 @@ import type { PriceListAssignment } from '../types'
 
 const assignmentSchema = z
   .object({
-    branch_id: z.number({ message: 'Branch is required' }).min(1, 'Branch is required'),
+    branch_id: z.number({ message: 'La sucursal es requerida' }).min(1, 'La sucursal es requerida'),
     operating_unit_id: z.number().nullable(),
-    effective_from: z.string().min(1, 'Effective from is required'),
+    effective_from: z.string().min(1, 'La fecha de vigencia desde es requerida'),
     effective_to: z.string(),
     is_active: z.boolean(),
   })
   .refine((data) => !data.effective_to || data.effective_to >= data.effective_from, {
-    message: 'Effective to must be on or after effective from',
+    message: 'La fecha de vigencia hasta debe ser igual o posterior a la de inicio',
     path: ['effective_to'],
   })
 

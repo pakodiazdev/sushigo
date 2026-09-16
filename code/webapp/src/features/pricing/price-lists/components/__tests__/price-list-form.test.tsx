@@ -59,25 +59,25 @@ describe('PriceListForm', () => {
     vi.clearAllMocks()
   })
 
-  it('renders "Create Price List" as the submit label in create mode', () => {
+  it('renders "Crear Lista de Precios" as the submit label in create mode', () => {
     setHookState()
     const { getByText } = render(<PriceListForm onSuccess={vi.fn()} onCancel={vi.fn()} />)
-    expect(getByText('Create Price List')).toBeDefined()
+    expect(getByText('Crear Lista de Precios')).toBeDefined()
   })
 
-  it('renders "Update Price List" as the submit label in edit mode', () => {
+  it('renders "Actualizar Lista de Precios" as the submit label in edit mode', () => {
     setHookState({ isEditing: true })
     const { getByText } = render(
       <PriceListForm priceList={existingPriceList} onSuccess={vi.fn()} onCancel={vi.fn()} />
     )
-    expect(getByText('Update Price List')).toBeDefined()
+    expect(getByText('Actualizar Lista de Precios')).toBeDefined()
   })
 
-  it('calls onCancel when Cancel is clicked', () => {
+  it('calls onCancel when Cancelar is clicked', () => {
     setHookState()
     const onCancel = vi.fn()
     const { getByText } = render(<PriceListForm onSuccess={vi.fn()} onCancel={onCancel} />)
-    fireEvent.click(getByText('Cancel'))
+    fireEvent.click(getByText('Cancelar'))
     expect(onCancel).toHaveBeenCalledTimes(1)
   })
 
@@ -92,19 +92,19 @@ describe('PriceListForm', () => {
     setHookState({ isSubmitting: true })
     const { getByText, container } = render(<PriceListForm onSuccess={vi.fn()} onCancel={vi.fn()} />)
     expect(container.querySelector('.animate-spin')).toBeDefined()
-    expect((getByText(/Create Price List/).closest('button') as HTMLButtonElement).disabled).toBe(true)
+    expect((getByText(/Crear Lista de Precios/).closest('button') as HTMLButtonElement).disabled).toBe(true)
   })
 
   it('surfaces field errors', () => {
-    setHookState({ allErrors: { code: 'Code is required' } })
+    setHookState({ allErrors: { code: 'El código es requerido' } })
     const { getByText } = render(<PriceListForm onSuccess={vi.fn()} onCancel={vi.fn()} />)
-    expect(getByText('Code is required')).toBeDefined()
+    expect(getByText('El código es requerido')).toBeDefined()
   })
 
   it('wires the Active checkbox into setValue', () => {
     setHookState()
     const { getByLabelText } = render(<PriceListForm onSuccess={vi.fn()} onCancel={vi.fn()} />)
-    fireEvent.click(getByLabelText('Active'))
+    fireEvent.click(getByLabelText('Activa'))
     expect(mockSetValue).toHaveBeenCalledWith('is_active', false)
   })
 })

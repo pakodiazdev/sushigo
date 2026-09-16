@@ -67,11 +67,11 @@ export function AssignmentForm({
           branchDisabled={isEditing}
         />
 
-        <FormField label="Effective From" required error={allErrors.effective_from}>
+        <FormField label="Vigente desde" required error={allErrors.effective_from}>
           <Input type="date" {...register('effective_from')} error={!!allErrors.effective_from} />
         </FormField>
 
-        <FormField label="Effective To" error={allErrors.effective_to} hint="Optional — leave blank for no end date">
+        <FormField label="Vigente hasta" error={allErrors.effective_to} hint="Opcional — déjalo en blanco para no tener fecha de fin">
           <Input type="date" {...register('effective_to')} error={!!allErrors.effective_to} />
         </FormField>
 
@@ -79,7 +79,7 @@ export function AssignmentForm({
           id="assignment-is-active"
           checked={isActive}
           onChange={(e) => setValue('is_active', e.target.checked)}
-          label="Active"
+          label="Activa"
         />
       </SlidePanel.Body>
 
@@ -94,7 +94,7 @@ export function AssignmentForm({
                 disabled={isSubmitting || isDeleting}
               >
                 {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Delete
+                Eliminar
               </Button>
             </CanAccess>
           ) : (
@@ -102,11 +102,11 @@ export function AssignmentForm({
           )}
           <div className="flex justify-end space-x-3">
             <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting || isDeleting}>
-              Cancel
+              Cancelar
             </Button>
             <Button type="submit" disabled={isSubmitting || isDeleting}>
               {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isEditing ? 'Update' : 'Create'} Assignment
+              {isEditing ? 'Actualizar' : 'Crear'} Asignación
             </Button>
           </div>
         </div>

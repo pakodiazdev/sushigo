@@ -74,7 +74,7 @@ describe('VariantPriceForm', () => {
     const { getByText, getByTestId } = render(
       <VariantPriceForm priceListId="pl-1" onSuccess={vi.fn()} onCancel={vi.fn()} />
     )
-    expect(getByText('Create Price')).toBeDefined()
+    expect(getByText('Crear Precio')).toBeDefined()
     expect(getByTestId('variant-picker')).toBeDefined()
   })
 
@@ -83,16 +83,16 @@ describe('VariantPriceForm', () => {
     const { getByText, queryByTestId } = render(
       <VariantPriceForm priceListId="pl-1" variantPrice={existingVariantPrice} onSuccess={vi.fn()} onCancel={vi.fn()} />
     )
-    expect(getByText('Update Price')).toBeDefined()
+    expect(getByText('Actualizar Precio')).toBeDefined()
     expect(queryByTestId('variant-picker')).toBeNull()
-    expect(getByText(/can't be changed/)).toBeDefined()
+    expect(getByText(/no puede cambiarse/)).toBeDefined()
   })
 
   it('calls onCancel when Cancel is clicked', () => {
     setHookState()
     const onCancel = vi.fn()
     const { getByText } = render(<VariantPriceForm priceListId="pl-1" onSuccess={vi.fn()} onCancel={onCancel} />)
-    fireEvent.click(getByText('Cancel'))
+    fireEvent.click(getByText('Cancelar'))
     expect(onCancel).toHaveBeenCalledTimes(1)
   })
 
@@ -104,9 +104,9 @@ describe('VariantPriceForm', () => {
   })
 
   it('surfaces field errors', () => {
-    setHookState({ allErrors: { price: 'Price is required' } })
+    setHookState({ allErrors: { price: 'El precio es requerido' } })
     const { getByText } = render(<VariantPriceForm priceListId="pl-1" onSuccess={vi.fn()} onCancel={vi.fn()} />)
-    expect(getByText('Price is required')).toBeDefined()
+    expect(getByText('El precio es requerido')).toBeDefined()
   })
 
   it('shows a spinner and disables submit while submitting', () => {
@@ -115,7 +115,7 @@ describe('VariantPriceForm', () => {
       <VariantPriceForm priceListId="pl-1" onSuccess={vi.fn()} onCancel={vi.fn()} />
     )
     expect(container.querySelector('.animate-spin')).toBeDefined()
-    expect((getByText(/Create Price/).closest('button') as HTMLButtonElement).disabled).toBe(true)
+    expect((getByText(/Crear Precio/).closest('button') as HTMLButtonElement).disabled).toBe(true)
   })
 
   it('wires the Variant picker into setValue', () => {
@@ -128,7 +128,7 @@ describe('VariantPriceForm', () => {
   it('wires the Active checkbox into setValue', () => {
     setHookState()
     const { getByLabelText } = render(<VariantPriceForm priceListId="pl-1" onSuccess={vi.fn()} onCancel={vi.fn()} />)
-    fireEvent.click(getByLabelText('Active'))
+    fireEvent.click(getByLabelText('Activo'))
     expect(mockSetValue).toHaveBeenCalledWith('is_active', false)
   })
 })

@@ -73,11 +73,11 @@ describe('Product detail — embedded Variant catalog', () => {
     cy.contains('h2', 'Nuevo producto', { timeout: 10_000 }).should('be.visible')
 
     cy.get('form').within(() => {
-      cy.get('input[placeholder="e.g., Coca-Cola Original 600 ml"]').type('Cypress Rice 1kg', {
+      cy.get('input[placeholder="Ej. Coca-Cola Original 600 ml"]').type('Cypress Rice 1kg', {
         force: true,
       })
       cy.get('select').first().select(CATEGORY_NAME)
-      cy.contains('button', 'Create Product').scrollIntoView().click({ force: true })
+      cy.contains('button', 'Crear Producto').scrollIntoView().click({ force: true })
     })
 
     cy.contains('Product created successfully', { timeout: 10_000 }).should('be.visible')

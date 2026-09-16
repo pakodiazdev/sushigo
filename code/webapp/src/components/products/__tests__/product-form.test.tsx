@@ -107,14 +107,14 @@ describe('ProductForm', () => {
       expect(getByText('Beverages')).toBeDefined()
       expect(getByText('Snacks')).toBeDefined()
       expect(getByText('Coca-Cola')).toBeDefined()
-      expect(getByText('No brand')).toBeDefined()
+      expect(getByText('Sin marca')).toBeDefined()
     })
 
     it('renders the uploader and not the edit-mode notice', () => {
       setHookState()
       const { getByTestId, queryByText } = render(<ProductForm onSuccess={vi.fn()} onCancel={vi.fn()} />)
       expect(getByTestId('media-uploader-stub')).toBeDefined()
-      expect(queryByText(/Photo management for existing products/)).toBeNull()
+      expect(queryByText(/gestión de fotos para productos existentes/)).toBeNull()
     })
 
     it('wires uploader onChange into setValue', () => {
@@ -132,18 +132,18 @@ describe('ProductForm', () => {
       expect(mockSetIsUploaderBusy).toHaveBeenCalledWith(true)
     })
 
-    it('calls onCancel when Cancel is clicked', () => {
+    it('calls onCancel when Cancelar is clicked', () => {
       setHookState()
       const onCancel = vi.fn()
       const { getByText } = render(<ProductForm onSuccess={vi.fn()} onCancel={onCancel} />)
-      fireEvent.click(getByText('Cancel'))
+      fireEvent.click(getByText('Cancelar'))
       expect(onCancel).toHaveBeenCalledTimes(1)
     })
 
-    it('renders "Create Product" as the submit label', () => {
+    it('renders "Crear Producto" as the submit label', () => {
       setHookState()
       const { getByText } = render(<ProductForm onSuccess={vi.fn()} onCancel={vi.fn()} />)
-      expect(getByText('Create Product')).toBeDefined()
+      expect(getByText('Crear Producto')).toBeDefined()
     })
 
     it('calls handleSubmit/onSubmit when the form is submitted', () => {
@@ -156,7 +156,7 @@ describe('ProductForm', () => {
     it('disables the submit button when isSubmitDisabled is true', () => {
       setHookState({ isSubmitDisabled: true })
       const { getByText } = render(<ProductForm onSuccess={vi.fn()} onCancel={vi.fn()} />)
-      expect((getByText('Create Product').closest('button') as HTMLButtonElement).disabled).toBe(true)
+      expect((getByText('Crear Producto').closest('button') as HTMLButtonElement).disabled).toBe(true)
     })
 
     it('shows a spinner while submitting', () => {
@@ -166,19 +166,19 @@ describe('ProductForm', () => {
     })
 
     it('surfaces field errors', () => {
-      setHookState({ allErrors: { name: 'Name must be at least 2 characters' } })
+      setHookState({ allErrors: { name: 'El nombre debe tener al menos 2 caracteres' } })
       const { getByText } = render(<ProductForm onSuccess={vi.fn()} onCancel={vi.fn()} />)
-      expect(getByText('Name must be at least 2 characters')).toBeDefined()
+      expect(getByText('El nombre debe tener al menos 2 caracteres')).toBeDefined()
     })
   })
 
   describe('edit mode', () => {
-    it('shows "Update Product" as the submit label', () => {
+    it('shows "Actualizar Producto" as the submit label', () => {
       setHookState()
       const { getByText } = render(
         <ProductForm product={existingProduct} onSuccess={vi.fn()} onCancel={vi.fn()} />
       )
-      expect(getByText('Update Product')).toBeDefined()
+      expect(getByText('Actualizar Producto')).toBeDefined()
     })
 
     it('shows the edit-mode photo notice instead of the uploader', () => {
@@ -187,7 +187,7 @@ describe('ProductForm', () => {
         <ProductForm product={existingProduct} onSuccess={vi.fn()} onCancel={vi.fn()} />
       )
       expect(queryByTestId('media-uploader-stub')).toBeNull()
-      expect(getByText(/Photo management for existing products/)).toBeDefined()
+      expect(getByText(/gestión de fotos para productos existentes/)).toBeDefined()
     })
   })
 })

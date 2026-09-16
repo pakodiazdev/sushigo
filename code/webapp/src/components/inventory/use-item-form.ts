@@ -12,8 +12,8 @@ import type { Item } from '@/types/inventory'
 // PRODUCTO is deliberately excluded — Products are created exclusively via the
 // /inventario/productos SlidePanel (#423); this quick-item form is INSUMO/ACTIVO only (#429).
 export const itemSchema = z.object({
-  sku: z.string().min(2, 'SKU must be at least 2 characters'),
-  name: z.string().min(3, 'Name must be at least 3 characters'),
+  sku: z.string().min(2, 'El SKU debe tener al menos 2 caracteres'),
+  name: z.string().min(3, 'El nombre debe tener al menos 3 caracteres'),
   description: z.string(),
   type: z.enum(['INSUMO', 'ACTIVO']),
   is_stocked: z.boolean(),

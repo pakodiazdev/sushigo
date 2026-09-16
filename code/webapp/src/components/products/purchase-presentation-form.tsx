@@ -54,9 +54,9 @@ export function PurchasePresentationForm({
     <form onSubmit={handleSubmit(onSubmit)} className="flex h-full flex-col">
       <SlidePanel.Body className="flex-1 space-y-6">
         {isEditing ? (
-          <FormField label="Template">
+          <FormField label="Plantilla">
             <p className="rounded-md border border-input bg-muted px-3 py-2 text-sm text-foreground">
-              {presentation?.template?.name ?? 'Unknown template'}
+              {presentation?.template?.name ?? 'Plantilla desconocida'}
               {presentation?.template && (
                 <span className="ml-2 text-xs text-muted-foreground">
                   {presentation.template.package_type} · ×{presentation.template.base_unit_quantity}
@@ -65,13 +65,13 @@ export function PurchasePresentationForm({
             </p>
           </FormField>
         ) : (
-          <FormField label="Template" required error={allErrors.template_id}>
+          <FormField label="Plantilla" required error={allErrors.template_id}>
             <Select
               {...register('template_id')}
               error={!!allErrors.template_id}
               disabled={isTemplatesLoading}
             >
-              <option value="">Select a template…</option>
+              <option value="">Selecciona una plantilla…</option>
               {assignableTemplates.map((template) => (
                 <option key={template.id} value={template.id}>
                   {template.name} ({template.package_type} · ×{template.base_unit_quantity})
@@ -91,16 +91,16 @@ export function PurchasePresentationForm({
           <div className="flex items-start gap-2 rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-800 dark:border-red-800 dark:bg-red-950/50 dark:text-red-300">
             <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0" />
             <span>
-              This template&apos;s compatible unit ({selectedTemplate?.compatible_dimension_uom?.symbol}) doesn&apos;t
-              match this Variant&apos;s base unit ({variantUom?.symbol}). Choose a compatible template instead.
+              La unidad compatible de esta plantilla ({selectedTemplate?.compatible_dimension_uom?.symbol}) no
+              coincide con la unidad base de esta variante ({variantUom?.symbol}). Elige una plantilla compatible.
             </span>
           </div>
         )}
 
-        <FormField label="Package Barcode" error={allErrors.package_barcode}>
+        <FormField label="Código de barras del paquete" error={allErrors.package_barcode}>
           <Input
             {...register('package_barcode')}
-            placeholder="Optional — separate from the Variant's own unit barcode"
+            placeholder="Opcional — distinto del código de barras propio de la variante"
             error={!!allErrors.package_barcode}
           />
         </FormField>
@@ -109,7 +109,7 @@ export function PurchasePresentationForm({
           id="presentation-is-default"
           checked={isDefault}
           onChange={(e) => setValue('is_default', e.target.checked)}
-          label="Default presentation for this Variant"
+          label="Presentación predeterminada para esta variante"
         />
 
         {isEditing && (
@@ -117,7 +117,7 @@ export function PurchasePresentationForm({
             id="presentation-is-active"
             checked={isActive}
             onChange={(e) => setValue('is_active', e.target.checked)}
-            label="Active"
+            label="Activa"
           />
         )}
       </SlidePanel.Body>
@@ -125,11 +125,11 @@ export function PurchasePresentationForm({
       <SlidePanel.Footer>
         <div className="flex justify-end space-x-3">
           <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
-            Cancel
+            Cancelar
           </Button>
           <Button type="submit" disabled={isSubmitting || isUomMismatch}>
             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {isEditing ? 'Save' : 'Assign'} Presentation
+            {isEditing ? 'Guardar' : 'Asignar'} Presentación
           </Button>
         </div>
       </SlidePanel.Footer>
