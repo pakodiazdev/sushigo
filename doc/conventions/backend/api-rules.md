@@ -98,6 +98,10 @@ $this->lock()->get();
 
 ### Typing
 
+PHP `^8.5` is the API's sole supported runtime — `composer.json`, the Docker image, and CI all
+agree on it, and CI mechanically enforces it via `composer check-platform-reqs`. See
+[TD-08](../../decisions/td-08-php-runtime-compatibility-contract.md) for the full policy and why.
+
 **Always use strong typing in PHP 8.5:**
 
 ```php

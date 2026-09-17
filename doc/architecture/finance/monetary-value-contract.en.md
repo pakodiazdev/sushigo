@@ -135,8 +135,10 @@ The default final-money rounding mode is `ROUND_HALF_UP` (round half away from z
 `round()`'s own default PHP behavior and this codebase's pre-existing convention (see
 `WeightedAverageCostCalculator`, which already used `round($value, 4)`). `Decimal::of()` and
 `Money`'s minor-unit derivation implement this manually via `bcmath` (`bcadd(..., '0.5', 0)` after
-shifting to an integer scale, then shifting back) rather than relying on `bcround()` (PHP 8.4+),
-since `composer.json` still declares `"php": "^8.2"` compatibility.
+shifting to an integer scale, then shifting back) rather than relying on `bcround()` (PHP 8.4+).
+This predates [TD-08](../../decisions/td-08-php-runtime-compatibility-contract.md), which raised
+`composer.json`'s declared floor to `^8.5` — switching to `bcround()` is now a legitimate
+behavior-neutral follow-up, not something this document's rounding contract requires.
 
 ## 7. Related
 

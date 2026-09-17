@@ -6,7 +6,7 @@
     "keywords": ["sushigo", "restaurant-management", "inventory", "laravel", "api"],
     "license": "Elastic-2.0",
     "require": {
-        "php": "^8.2",
+        "php": "^8.5",
         "ext-bcmath": "*",
         "darkaonline/l5-swagger": "^9.0",
         "laravel/framework": "^12.0",
