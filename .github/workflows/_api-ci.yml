@@ -94,6 +94,16 @@ jobs:
       - name: Install Composer dependencies
         run: composer install --prefer-dist --no-interaction --no-progress --no-scripts
 
+      # Fails if the runner's actual PHP/extension platform doesn't satisfy what composer.json
+      # (root) and every installed package's own composer.lock entry declare (#638) — the
+      # mechanical enforcement for the declared PHP floor (currently ^8.5, matching the Docker
+      # image and this job's own `setup-php` version above). A single fast Composer command in
+      # this already-existing job, not a dedicated runner/matrix — see
+      # doc/decisions/td-08-php-runtime-compatibility-contract.md for why this is enough and a
+      # separate lower-PHP-version test matrix isn't.
+      - name: Validate Composer platform requirements
+        run: composer check-platform-reqs
+
       - name: Run PHP Pint (check mode)
         run: ./vendor/bin/pint --test
 

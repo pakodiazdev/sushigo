@@ -144,8 +144,10 @@ punto medio, alejándose de cero), coincidiendo con el comportamiento por defect
 PHP y la convención preexistente de este código base (ver `WeightedAverageCostCalculator`, que ya
 usaba `round($value, 4)`). `Decimal::of()` y la derivación de unidades mínimas de `Money` implementan
 esto manualmente vía `bcmath` (`bcadd(..., '0.5', 0)` tras desplazar a una escala entera, luego
-desplazando de vuelta) en lugar de depender de `bcround()` (PHP 8.4+), ya que `composer.json`
-todavía declara compatibilidad `"php": "^8.2"`.
+desplazando de vuelta) en lugar de depender de `bcround()` (PHP 8.4+). Esto es anterior a
+[TD-08](../../decisions/td-08-php-runtime-compatibility-contract.md), que elevó el piso declarado
+en `composer.json` a `^8.5` — migrar a `bcround()` es ahora una mejora legítima y neutral en
+comportamiento, no algo que exija el contrato de redondeo de este documento.
 
 ## 7. Relacionados
 
