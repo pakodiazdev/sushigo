@@ -157,6 +157,105 @@ the retired `[wip]` mode (#598).
 
 ---
 
+## Cross-mode wall-clock comparison (#612)
+
+#589's original three modes (`[e2e-test]` / `[wip]` / final) were retired by #598 before this
+comparison was produced — see "Draft status + CI-cost modifiers" above. The measurement below
+targets the **current** three-tier system instead: `[skip-ci]`, `[ci-check]` (draft default), and
+`[ci-check-all]` (ready default). Figures are real, not synthetic — pulled from GitHub Actions job
+timestamps on live runs (`gh run view --json jobs`), linked below for anyone who wants to
+re-verify or refresh them.
+
+### Total wall-clock per mode
+
+| Mode | Representative run | Total wall-clock¹ | Dominant cost |
+|---|---|---:|---|
+| `[skip-ci]` (draft) | No dedicated run in this sample — `analyze-pr` is unconditional (`ci.yml` has no `if` gating it on the modifier), so the same `analyze-pr` timings measured below apply (~7–11s); `ci-gate` is skipped on a draft, so nothing else runs | ~7–11s | `analyze-pr` itself (checkout + change detection) — the only job that ever runs |
+| `[skip-ci]` (ready, modifier still on title) | Same `analyze-pr` cost, **plus** `ci-gate`, which also always runs on a ready PR (`if: draft != true`, independent of the modifier) and fails immediately once it reads `shallow_on_ready = true` — a single bash step, the same order of magnitude as the ~3–4s `ci-gate` passes measured below | ~10–15s | `ci-gate` failing red ("remove the modifier") — not a real test failure |
+| `[ci-check]` (draft, webapp-only change) | PR #658, [run 35064538627](https://github.com/pakodiazdev/sushigo/actions/runs/35064538627) | 7m41s | 1 Cypress shard (`pr-specs`): 5m25s |
+| `[ci-check-all]` (ready, webapp-only change, selects full E2E) | PR #658, [run 35070083374](https://github.com/pakodiazdev/sushigo/actions/runs/35070083374) | 12m46s | 6 Cypress shards (`full`), longest 7m57s (shard 2/6) |
+| `[ci-check-all]` (ready, api+webapp+infra change, selects full E2E) | PR #660, [run 35279074203](https://github.com/pakodiazdev/sushigo/actions/runs/35279074203) | 12m46s | 6 Cypress shards (`full`), longest 7m53s (shard 2/6) |
+| `[ci-check-all]` (ready, documentation-only change) | PR #661, [run 35311509095](https://github.com/pakodiazdev/sushigo/actions/runs/35311509095) | 15s | `analyze-pr` (10s) + `ci-gate`'s doc-only fast green (2s) — `api-ci`/`webapp-ci`/`e2e-ci` all legitimately skip (`verify_needed = false`) |
+
+¹ First job's `startedAt` to `ci-gate`'s `completedAt`; excludes GitHub's own run-queue latency
+before the first job starts, which varies with runner availability and isn't a pipeline cost.
+
+The two api/webapp-touching `[ci-check-all]` rows land at the **same** 12m46s despite one
+touching `api-ci` and the other not, but that equality is close, not zero-marginal-cost: `api-ci`
+and `webapp-ci` run **in parallel**, and in the PR #660 sample `api-ci` (lint + swagger + 4-shard
+phpunit + coverage + sonar) is the slightly later-finishing branch — `api-sonar` completes at
+21:57:08 vs. `webapp-sonar` at 21:56:33 — so it, not `webapp-ci`, is what gates `e2e-plan`'s
+21:57:11 start (this is why the per-mode aggregate below walks the `api-ci` chain, not
+`webapp-ci`, as PR #660's critical path). Comparing each run's `analyze-pr`-to-`e2e-plan` phase
+directly: 4m23s for PR #658 (webapp-only) vs. 4m29s for PR #660 (api+webapp) — `api-ci`'s presence
+adds a real but small ~6s here, almost entirely hidden by how much it overlaps `webapp-ci`'s own
+runtime, not "no wall-clock." The two runs landing at the *same* 12m46s total is this ~6s being
+offset by the E2E phase's own shard-to-shard variance (7m57s vs. 7m53s for the slowest shard) —
+coincidence between two samples, not evidence of zero cost; don't read more into it than that.
+
+The full 6-shard Cypress suite is the wall-clock floor **only when the change actually selects
+full E2E** (any `code/**`, changed `.cy.ts`, or pipeline/E2E-infra file) — a `[ci-check-all]` /
+ready PR that touches none of those, like this very documentation PR, resolves
+`e2e_selection = none` and finishes in ~15s via the documentation/config-only fast green (see
+"Documentation / config-only PRs" below), not the 6-shard floor.
+
+### Environment-startup overhead vs. actual work
+
+**Per-mode aggregate** (what the archived task's own Objective asks for): every step of every job
+on the mode's **critical path** — the job chain that actually gates the next stage, not parallel
+siblings that finish before their sibling does — classified as environment/stack-boot overhead
+(checkout, `setup-node`/`setup-php`, dependency install/restore, Docker image build, Postgres
+boot, Laravel/Vite health-wait, artifact upload, teardown, GitHub's own job bookkeeping) or actual
+work (the lint/test/build/scan command itself), then summed and compared against the mode's total
+wall-clock from the first table:
+
+| Mode | Critical-path jobs | Overhead | Work | Dispatch/queue gap¹ | Overhead share of wall-clock |
+|---|---|---:|---:|---:|---:|
+| `[ci-check]` (draft, PR #658) | `analyze-pr` → `webapp-lint` → `webapp-tests` → `webapp-test-count` → `e2e-plan` → `cypress-e2e-run` → `cypress-timing` | 158s | 264s | 39s | **34.3%** (158s / 461s) |
+| `[ci-check-all]` (ready, PR #660) | `analyze-pr` → `api-lint` → `api-tests` (shard 4/4) → `api-coverage-merge` → `api-sonar` → `e2e-plan` → `cypress-e2e-run` (shard 2/6) → `cypress-timing` | 146s | 572s | 48s | **19.1%** (146s / 766s) |
+
+¹ Time between a job's dependency completing and the next job actually starting — GitHub
+scheduling a fresh runner. Neither overhead nor work; included so overhead + work + gap
+reconciles to the measured wall-clock.
+
+`[ci-check-all]` carries a **lower** overhead share than `[ci-check]` (19% vs. 34%) even though
+both pay the same kind of fixed per-job costs: the full run's critical path does proportionally
+more actual verification work (4-shard PHPUnit + coverage + Sonar + a full Cypress shard) for the
+same handful of fixed setup steps, so the fixed cost matters less as a fraction of the total.
+
+**Per-job detail**, for the two jobs whose overhead is easiest to attribute to a single well-known
+cause (same runs as above):
+
+| Job | Total | Environment/stack-boot overhead | Actual work | Overhead share |
+|---|---:|---|---|---:|
+| `api-ci / api-lint` | 39s | ~10s (checkout 2s + setup-php 3s + composer install 5s) | ~28s (Pint, 1346 files) | ~26% |
+| `e2e-ci / cypress-e2e-run` (one shard) | 5m35s | ~1m32s (checkout + deps restore + Docker image build ~21s + Postgres boot ~11s + Laravel/Vite health-wait ~31s + misc ~14s + ~15s teardown) | ~4m3s (Cypress specs) | ~27% |
+
+### What this means for #491 / #559
+
+This data reconfirms, rather than replaces, #559's own detailed per-shard analysis in
+[`testing-strategy.md` → "Per-shard overhead reduction (#559)"](../testing/testing-strategy.md) —
+that section already measured the fixed-overhead cuts, ruled out "more shards" as a lever (going
+from 6 to 8 shards moved the slowest shard by ~1s for +33% runners), and named **duration-aware
+shard balancing** as the follow-up worth doing. Two things this run's fresh numbers add:
+
+- **Shard 2/6 is the slowest shard in both `[ci-check-all]` runs measured here** (7m57s and 7m53s,
+  vs. #559's own ~6min warm baseline for the slowest shard) — the same shard index is the outlier
+  across two different PRs with different diffs, which is more evidence for #559's "the split
+  isn't by spec runtime" conclusion, specifically pointing at *which* shard index to look at first
+  when doing the duration-aware rebalance #559 already recommends.
+- The ~1m17s per-shard stack-boot overhead is paid **independently by every shard, in parallel** —
+  so it doesn't add to wall-clock as shard count grows, only to total *compute* minutes (GitHub
+  Actions billing). That confirms shard count is a cost lever, not a wall-clock lever — consistent
+  with #559's own "more shards, rejected" finding above.
+- `[ci-check]` is roughly **40% faster** wall-clock than `[ci-check-all]` (7m41s vs. 12m46s —
+  `[ci-check-all]` takes about 66% longer) — almost entirely because it runs 1 Cypress shard
+  against the PR's own changed specs instead of the full 6-shard suite. The API/webapp lint+test
+  portions are a small fraction of either mode's total, so further speedups to the draft loop
+  should target E2E selection, not lint/unit steps.
+
+---
+
 ## `ci-gate` — the one stable required check
 
 `ci-gate` is the single context branch protection points at. Its name never changes, so changing a
