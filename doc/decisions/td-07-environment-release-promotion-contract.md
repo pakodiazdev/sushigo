@@ -255,7 +255,18 @@ replica of that revision receives traffic — built new, not by copying `init.sh
 For QA, migrations run at manual-deploy time against whatever branch was requested, without the
 ancestry guard (see "QA: manual, decoupled" above). `db:seed --force` must never run automatically
 against Production, and must not run unattended against Demo either — seeding stays an
-explicitly-invoked step everywhere, including QA.
+explicitly-invoked step for both.
+
+**Correction (2026-09-18, during #634's PR review):** the line above originally read "including
+QA" as well. The project owner explicitly overrode that for QA specifically, once #634's migration
+step was implemented and this was QA's first deploy through it: the database needed its base data
+(roles, permissions, Passport OAuth clients, the default admin user) bootstrapped, and the owner
+preferred the `migrate` job seed it automatically going forward via the idempotent
+`Production\ProductionSeeder` (verified safe to re-run — every seeder in its chain guards itself
+against duplicates internally) rather than rely on a human remembering a separate manual step. See
+[`deployment.md`](../conventions/ci/deployment.md)'s "Seeding" section for the full rationale and
+implementation. This narrows the rule to Demo and Production only — neither is affected by this
+correction.
 
 **Migrations in Demo's and Production's automated pipelines must be expand/contract-compatible with
 the currently-running revision — a destructive migration is not safe to run automatically.** The

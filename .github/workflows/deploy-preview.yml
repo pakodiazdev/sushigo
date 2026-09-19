@@ -1,5 +1,114 @@
 name: Deploy Preview (manual)
 
+# QA/Preview manual deploy (#634, per TD-07 — doc/decisions/td-07-environment-release-promotion-
+# contract.md). Stays manual/branch-addressable — no automatic trigger from `main` — and remains
+# fully decoupled from the automated Demo/Production pipelines (#635/#636): this workflow neither
+# consumes nor produces anything they depend on.
+#
+# Four jobs:
+#   build   — builds and pushes the `preview` image for the requested ref.
+#   migrate — runs `php artisan migrate --force` directly against QA's database (Supabase, reachable
+#             over the public internet — no Cloud SQL proxy/VPC needed), once per dispatch, without
+#             the ancestry/watermark guard Demo/Production require (a human explicitly picking an
+#             older branch for QA is not the hazard an automated silent revert would be). Runs in
+#             its own database-scoped concurrency group, independent of the deploy job's per-
+#             service_suffix group — see "Concurrency" below.
+#   deploy  — deploys the built image to Cloud Run with its DB config and OAuth key secrets
+#             explicitly bound (see "Deploy configuration" below — without this, a brand-new
+#             service_suffix boots with none of that and never starts), then polls /api/v1/health
+#             until the new revision is actually serving before considering the deploy step done.
+#   smoke   — runs .github/scripts/deploy-smoke-test.sh against the deployed URL: SPA availability,
+#             login, /me, and representative Employees/Items/Stock reads.
+#
+# migrate must complete before deploy exercises the new revision (build and migrate themselves run
+# in parallel — migration doesn't need the built image, it only needs the checked-out ref). Any
+# job's failure fails the whole run and is surfaced in $GITHUB_STEP_SUMMARY.
+#
+# ── Seeding — deliberate exception to TD-07's "never automatic" rule (see deployment.md) ────────
+# The migrate job also runs `Database\Seeders\Production\ProductionSeeder` (roles, permissions,
+# Passport OAuth clients, the default admin user, branch/operating-unit/cash-register base data)
+# with `--force`, on every dispatch. TD-07 and #634 originally required seeding to stay a separate,
+# explicitly-invoked step, never automatic — this project owner explicitly overrode that for QA
+# specifically, after confirming every seeder in ProductionSeeder's chain guards itself against
+# duplicates internally (updateOrCreate/exists() checks), so repeated --force runs are safe even
+# though --force itself bypasses this codebase's own TrackableSeeder run-once/lock tracking. See
+# deployment.md's "QA: manual, decoupled" section for the full rationale. `preview` is not in
+# config/seeders.php's environment map, so the specific class is targeted directly via `--class`
+# rather than the environment-routed `db:seed` — this does not require any API code change.
+#
+# ── Concurrency — two independent locks, not one ──────────────────────────────────────────────
+# - deploy job: `preview-deploy-<repo>-<service_suffix|default>` (existing, unchanged) — stops two
+#   deploys of the *same* suffix from colliding.
+# - migrate job: `qa-migrate-<repo>` — independent of service_suffix, since every QA-suffixed
+#   service shares one Supabase database; without this, two differently-suffixed dispatches could
+#   still race `php artisan migrate` against that shared database even though their deploy steps
+#   never collide.
+#
+# ── Migration lock duration — decision (#634) ─────────────────────────────────────────────────
+# The lock above is held only for the migration step itself, not through the manual-validation
+# window that follows a deploy. See doc/conventions/ci/deployment.md's "QA: manual, decoupled"
+# section for the full rationale (this was TD-07's explicitly open design question) — in short:
+# QA data is disposable by design, nothing in this pipeline can signal "a human is done testing" to
+# release a longer-held lock, and each service_suffix getting its own isolated/resettable database
+# is a materially larger infrastructure change than this issue's scope. The known trade-off: a
+# second suffix's migration can still land on the shared database mid-manual-test of an earlier
+# suffix. Revisit with per-suffix isolated databases if this causes real friction.
+#
+# ── New configuration this workflow requires, scoped to the `qa` GitHub Environment ─────────────
+# (Settings → Environments → qa — no required reviewers, no branch restriction: QA deploys from
+# any branch per TD-07, so a deployment_branch_policy would block exactly the flow this workflow
+# exists for. `migrate` and `smoke` declare `environment: qa` so these resolve without a QA_
+# prefix — Demo/Production will get their own `demo`/`production` environments later with the
+# *same* secret/var names, scoped independently, per deployment.md's environment table.)
+# vars:    SMOKE_TEST_EMAIL
+# secrets: DB_HOST, DB_DATABASE, DB_USERNAME, DB_PASSWORD, APP_KEY, SMOKE_TEST_PASSWORD,
+#          SEEDER_ADMIN_PASSWORD, SEEDER_EMPLOYEE_PASSWORD, SEEDER_INVENTORY_PASSWORD (same three
+#          env vars config/seeders.php already reads — see code/api/config/seeders.php:15-18 —
+#          set here so the *first* seeding run creates the default users with a real chosen
+#          password instead of falling back to the hardcoded default)
+#
+# `build` and `deploy` intentionally do NOT declare `environment: qa` — `build` only uses the
+# pre-existing, already-shared vars (GCP_PROJECT_ID, AR_LOCATION, AR_REPO, IMAGE_NAME_PREVIEW,
+# API_URL_PREVIEW), none of which are QA-exclusive (`sushigo-api-preview` is built once and used
+# by *both* QA and Demo, per deployment.md's registry table). `deploy` doesn't touch any GitHub
+# secret directly at all — see "Deploy configuration" below for why.
+#
+# ── Deploy configuration — binds the SAME GCP Secret Manager secrets the service already used ────
+# `gcloud run deploy` originally set nothing beyond `--image`/`--region`, relying on Cloud Run
+# inheriting the previous revision's config — which only works for the *existing* default service,
+# and even then can silently point at a stale database if that config was ever changed by hand
+# (discovered while testing #634 for real: the existing `sushigo-preview` revision's inherited
+# `DB_HOST` pointed at a Supabase project that no longer resolved). A brand-new `service_suffix`
+# has no previous revision at all, so it boots with **no** DB config and **no** OAuth keys —
+# `entrypoint.sh`'s `copy_secret_file` retries 5 times, fails, and the container never reaches
+# `apache2-foreground`, which Cloud Run reports as "failed to start and listen on the port".
+#
+# `deploy` now explicitly passes `--set-secrets` for every sensitive value, referencing the exact
+# same Secret Manager secret **names** the service was already using (confirmed via `gcloud run
+# services describe sushigo-preview --format=yaml`): `APP_KEY=PREVIEW_APP_KEY:latest`,
+# `DB_HOST=PREVIEW_DB_HOST:latest`, `DB_DATABASE=PREVIEW_DB_DATABASE:latest`,
+# `DB_USERNAME=PREVIEW_DB_USER:latest`, `DB_PASSWORD=PREVIEW_DB_PASS:latest`, plus the OAuth pair
+# at the exact paths `entrypoint.sh` expects
+# (`/run/secrets/oauth_{private,public}/value.key=PREVIEW_OAUTH_{PRIVATE,PUBLIC}:latest`).
+# **This must reference secrets, not plain `--set-env-vars`/`--env-vars-file` literals** — these
+# variable names were already bound as Secret Manager references on the existing service, and
+# `gcloud run deploy` refuses to flip an existing variable's type ("Cannot update environment
+# variable [DB_HOST] to string literal because it has already been set with a different type"),
+# confirmed empirically while implementing this. `DB_CONNECTION=pgsql` is the one plain
+# `--set-env-vars` literal, matching what the service already had (Laravel's own DB_CONNECTION
+# default is `sqlite`, not `pgsql`, so this must stay explicit).
+#
+# **Known duplication, not yet unified:** the `qa` GitHub Environment's `DB_HOST`/`DB_DATABASE`/
+# `DB_USERNAME`/`DB_PASSWORD`/`APP_KEY` (used by `migrate`, which runs on the bare GitHub Actions
+# runner and needs literal values) and these `PREVIEW_*` GCP Secret Manager secrets (used by
+# `deploy`, which needs secret *references*) must be kept in sync by hand — updating one without
+# the other reintroduces exactly the "migrate and the deployed app talk to different databases"
+# bug this fix closes. See deployment.md's "Deploy now explicitly sets DB config..." note for the
+# full rationale and a possible future unification (`migrate` reading from Secret Manager too).
+# The deploying identity (`gha-sushigo-preview@sushigo-app.iam.gserviceaccount.com`) needs
+# `roles/secretmanager.secretAccessor` on all five `PREVIEW_*` secrets for `--set-secrets` to
+# succeed.
+
 on:
   workflow_dispatch:
     inputs:
@@ -20,19 +129,16 @@ permissions:
   id-token: write
   contents: read
 
-concurrency:
-  group: preview-deploy-${{ github.repository }}-${{ inputs.service_suffix || 'default' }}
-  cancel-in-progress: false
-
 jobs:
-  deploy-preview:
+  build:
+    name: build
     runs-on: ubuntu-latest
+    outputs:
+      image_uri: ${{ steps.image.outputs.image_uri }}
+      sha: ${{ steps.image.outputs.sha }}
 
     env:
       GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
-      GCP_REGION: ${{ inputs.region != '' && inputs.region || vars.GCP_REGION }}
-      BASE_SERVICE: ${{ vars.CLOUD_RUN_SERVICE_PREVIEW }}
-
       AR_LOCATION: ${{ vars.AR_LOCATION }}
       AR_REPO: ${{ vars.AR_REPO }}
       IMAGE_NAME: ${{ vars.IMAGE_NAME_PREVIEW }}
@@ -56,32 +162,22 @@ jobs:
 
       - name: Configure Docker auth for Artifact Registry
         run: |
+          set -euo pipefail
           gcloud auth configure-docker "${AR_LOCATION}-docker.pkg.dev" --quiet
 
-      - name: Compute service name
-        id: svc
-        run: |
-          set -euo pipefail
-          svc="${BASE_SERVICE}"
-          if [ -n "${{ inputs.service_suffix }}" ]; then
-            suf="$(echo "${{ inputs.service_suffix }}" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9-]+/-/g' | sed -E 's/^-+|-+$//g')"
-            svc="${BASE_SERVICE}-${suf}"
-          fi
-          echo "service=${svc}" >> "$GITHUB_OUTPUT"
-          echo "SERVICE=${svc}" >> "$GITHUB_ENV"
-
-      - name: Compute image tag
+      - name: Compute image URI
+        id: image
         run: |
           set -euo pipefail
           SHA="$(git rev-parse --short=12 HEAD)"
-          echo "SHA=preview-${SHA}" >> "$GITHUB_ENV"
+          IMAGE_URI="${AR_LOCATION}-docker.pkg.dev/${GCP_PROJECT_ID}/${AR_REPO}/${IMAGE_NAME}:preview-${SHA}"
+          echo "sha=${SHA}" >> "$GITHUB_OUTPUT"
+          echo "image_uri=${IMAGE_URI}" >> "$GITHUB_OUTPUT"
+          echo "IMAGE_URI=${IMAGE_URI}" >> "$GITHUB_ENV"
 
       - name: Build image
         run: |
           set -euo pipefail
-          IMAGE_URI="${AR_LOCATION}-docker.pkg.dev/${GCP_PROJECT_ID}/${AR_REPO}/${IMAGE_NAME}:${SHA}"
-          echo "IMAGE_URI=${IMAGE_URI}" >> "$GITHUB_ENV"
-
           docker build \
             -f docker/app/Dockerfile \
             --target preview \
@@ -94,6 +190,133 @@ jobs:
           set -euo pipefail
           docker push "${IMAGE_URI}"
 
+  migrate:
+    name: migrate
+    runs-on: ubuntu-latest
+    environment: qa
+    concurrency:
+      group: qa-migrate-${{ github.repository }}
+      cancel-in-progress: false
+    defaults:
+      run:
+        working-directory: code/api
+
+    steps:
+      - name: Checkout selected ref
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Setup PHP 8.5
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          coverage: none
+
+      - name: Install Composer dependencies
+        run: composer install --prefer-dist --no-interaction --no-progress --no-scripts --no-dev
+
+      - name: Configure QA database connection
+        env:
+          APP_KEY: ${{ secrets.APP_KEY }}
+          DB_HOST: ${{ secrets.DB_HOST }}
+          DB_PORT: ${{ vars.DB_PORT || '5432' }}
+          DB_DATABASE: ${{ secrets.DB_DATABASE }}
+          DB_USERNAME: ${{ secrets.DB_USERNAME }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+        run: |
+          set -euo pipefail
+          cp .env.example .env
+          {
+            echo "APP_KEY=${APP_KEY}"
+            echo "DB_CONNECTION=pgsql"
+            echo "DB_HOST=${DB_HOST}"
+            echo "DB_PORT=${DB_PORT}"
+            echo "DB_DATABASE=${DB_DATABASE}"
+            echo "DB_USERNAME=${DB_USERNAME}"
+            echo "DB_PASSWORD=${DB_PASSWORD}"
+          } >> .env
+
+      - name: Run migration (one-shot, forward-only)
+        run: php artisan migrate --force
+
+      - name: Seed QA base data (idempotent — safe to run every deploy)
+        env:
+          SEEDER_ADMIN_PASSWORD: ${{ secrets.SEEDER_ADMIN_PASSWORD }}
+          SEEDER_EMPLOYEE_PASSWORD: ${{ secrets.SEEDER_EMPLOYEE_PASSWORD }}
+          SEEDER_INVENTORY_PASSWORD: ${{ secrets.SEEDER_INVENTORY_PASSWORD }}
+        run: php artisan db:seed --class="Database\Seeders\Production\ProductionSeeder" --force
+
+      - name: Migration/seed summary
+        if: always()
+        env:
+          # Same command-injection hazard as "Compute service name" above — inputs.ref is a free-
+          # text workflow_dispatch field, so it must reach bash as data via env:, never spliced
+          # directly into this script's literal text.
+          REF_INPUT: ${{ inputs.ref }}
+        run: |
+          {
+            echo "### 🗄️ QA migration + seed — ref \`${REF_INPUT}\`"
+            echo ""
+            if [ "${{ job.status }}" = "success" ]; then
+              echo "- ✅ \`php artisan migrate --force\` completed"
+              echo "- ✅ \`ProductionSeeder\` completed (roles, permissions, admin user, base data)"
+            else
+              echo "- ❌ Migration or seeding failed — see job logs"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  deploy:
+    name: deploy
+    needs: [build, migrate]
+    runs-on: ubuntu-latest
+    concurrency:
+      group: preview-deploy-${{ github.repository }}-${{ inputs.service_suffix || 'default' }}
+      cancel-in-progress: false
+    outputs:
+      service_url: ${{ steps.url.outputs.service_url }}
+      revision: ${{ steps.url.outputs.revision }}
+
+    env:
+      GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+      GCP_REGION: ${{ inputs.region != '' && inputs.region || vars.GCP_REGION }}
+      BASE_SERVICE: ${{ vars.CLOUD_RUN_SERVICE_PREVIEW }}
+      IMAGE_URI: ${{ needs.build.outputs.image_uri }}
+
+    steps:
+      - name: Auth to Google Cloud (WIF)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: projects/${{ vars.GCP_PROJECT_NUMBER }}/locations/global/workloadIdentityPools/github-pool/providers/github-provider
+          service_account: gha-sushigo-preview@sushigo-app.iam.gserviceaccount.com
+
+      - name: Setup gcloud
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.GCP_PROJECT_ID }}
+
+      - name: Compute service name
+        id: svc
+        env:
+          # Pre-existing command-injection hazard (predates #634, flagged by Devin review on this
+          # PR): `${{ inputs.service_suffix }}` interpolated directly into the run script's literal
+          # text lets a crafted workflow_dispatch input execute arbitrary shell with the deploy
+          # job's GCP WIF credentials. Passed via env: instead, so bash only ever sees it as data.
+          SERVICE_SUFFIX_INPUT: ${{ inputs.service_suffix }}
+        run: |
+          set -euo pipefail
+          svc="${BASE_SERVICE}"
+          if [ -n "${SERVICE_SUFFIX_INPUT}" ]; then
+            suf="$(printf '%s' "${SERVICE_SUFFIX_INPUT}" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9-]+/-/g' | sed -E 's/^-+|-+$//g')"
+            if [ -z "${suf}" ] || ! printf '%s' "${suf}" | grep -qE '^[a-z0-9-]{1,40}$'; then
+              echo "::error::service_suffix sanitizes to an empty or invalid Cloud Run service-name suffix"
+              exit 1
+            fi
+            svc="${BASE_SERVICE}-${suf}"
+          fi
+          echo "service=${svc}" >> "$GITHUB_OUTPUT"
+          echo "SERVICE=${svc}" >> "$GITHUB_ENV"
+
       - name: Deploy to Cloud Run (preview)
         run: |
           set -euo pipefail
@@ -102,10 +325,69 @@ jobs:
             --region "${GCP_REGION}" \
             --platform managed \
             --allow-unauthenticated \
+            --set-env-vars "DB_CONNECTION=pgsql" \
+            --set-secrets "APP_KEY=PREVIEW_APP_KEY:latest,DB_HOST=PREVIEW_DB_HOST:latest,DB_DATABASE=PREVIEW_DB_DATABASE:latest,DB_USERNAME=PREVIEW_DB_USER:latest,DB_PASSWORD=PREVIEW_DB_PASS:latest,/run/secrets/oauth_private/value.key=PREVIEW_OAUTH_PRIVATE:latest,/run/secrets/oauth_public/value.key=PREVIEW_OAUTH_PUBLIC:latest" \
             --quiet
 
-      - name: Show service URL
+      - name: Show service URL and revision
+        id: url
         run: |
           set -euo pipefail
           URL="$(gcloud run services describe "${SERVICE}" --region "${GCP_REGION}" --format='value(status.url)')"
+          REVISION="$(gcloud run services describe "${SERVICE}" --region "${GCP_REGION}" --format='value(status.latestReadyRevisionName)')"
           echo "Preview URL: ${URL}"
+          echo "Revision: ${REVISION}"
+          echo "service_url=${URL}" >> "$GITHUB_OUTPUT"
+          echo "revision=${REVISION}" >> "$GITHUB_OUTPUT"
+
+      - name: Wait for API health check
+        run: |
+          set -euo pipefail
+          URL="${{ steps.url.outputs.service_url }}"
+          echo "Waiting for ${URL}/api/v1/health ..."
+          for i in $(seq 1 30); do
+            CODE="$(curl -s -o /tmp/health.json -w '%{http_code}' "${URL}/api/v1/health" || echo "000")"
+            if [ "$CODE" = "200" ]; then
+              echo "✅ Health check passed on attempt ${i}"
+              exit 0
+            fi
+            echo "  attempt ${i}: HTTP ${CODE}, retrying in 5s..."
+            sleep 5
+          done
+          echo "❌ Health check did not pass after 30 attempts"
+          cat /tmp/health.json 2>/dev/null || true
+          exit 1
+
+      - name: Deploy summary
+        if: always()
+        run: |
+          {
+            echo "### 🚀 QA deploy — \`${{ steps.svc.outputs.service }}\`"
+            echo ""
+            echo "- **Commit**: \`${{ needs.build.outputs.sha }}\`"
+            echo "- **Image**: \`${IMAGE_URI}\`"
+            echo "- **Revision**: \`${{ steps.url.outputs.revision }}\`"
+            echo "- **URL**: ${{ steps.url.outputs.service_url }}"
+            if [ "${{ job.status }}" = "success" ]; then
+              echo "- ✅ Deploy + health check passed"
+            else
+              echo "- ❌ Deploy or health check failed — see job logs"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  smoke:
+    name: smoke
+    needs: deploy
+    runs-on: ubuntu-latest
+    environment: qa
+
+    steps:
+      - name: Checkout (for the smoke test script)
+        uses: actions/checkout@v4
+
+      - name: Run deployment smoke test
+        env:
+          BASE_URL: ${{ needs.deploy.outputs.service_url }}
+          SMOKE_TEST_EMAIL: ${{ vars.SMOKE_TEST_EMAIL }}
+          SMOKE_TEST_PASSWORD: ${{ secrets.SMOKE_TEST_PASSWORD }}
+        run: bash .github/scripts/deploy-smoke-test.sh
