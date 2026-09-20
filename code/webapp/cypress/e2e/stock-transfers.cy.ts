@@ -14,7 +14,7 @@
  * Variant, its destination assignment, and the source opening balance it needs on top of that
  * via the API — the same pattern as variant-location-assignments.cy.ts.
  *
- * Run with: make cypress-run WORKSPACE=sushigo-a SPEC=cypress/e2e/stock-transfers.cy.ts
+ * Run with: make cypress-devlab-run-spec SPEC=stock-transfers
  */
 import users from '../fixtures/users.json'
 
@@ -29,17 +29,6 @@ const PRODUCT_NAME = 'Cypress Arroz para Traslado'
 const VARIANT_NAME = 'Cypress Arroz Traslado 1 kg'
 const VARIANT_CODE = 'CYP-TRANSFER-RICE-1KG'
 const UOM_CODE = 'CYPTKG'
-
-// ⚠️ QUARANTINED per #548 (same Cypress bug that quarantines purchase-receipts.cy.ts).
-// `cy.select()` on a native <select> asserts the target <option> is "visible", but a native
-// <option> always reports 0 x 0 px, so the command times out with
-// `expected '<option>' to be 'visible'` regardless of `{ force: true }`. The lifecycle this spec
-// drives (DRAFT → POSTED → REVERSED, both-balance moves, immutable TRANSFER movement, reversal
-// boundary) is fully covered by tests/Feature/Inventory/StockTransferTest.php (25 cases) and the
-// features/inventory/transfers Vitest suite (15 cases). Remove this guard when #548 is fixed.
-before(function () {
-  this.skip()
-})
 
 // Populated by the before() hook, consumed by the test (selects are driven by value = ULID,
 // not by option text, so seeded-name drift can't break the spec).
@@ -158,6 +147,25 @@ before(() => {
   })
 })
 
+// Status labels also occur in the list filter's native <option>s. Check the open
+// SlidePanel so visibility assertions exercise the detail badge instead of the filter.
+const inPanel = (title: string, fn: () => void) =>
+  cy.contains('h2', title)
+    .parents('.bg-background.shadow-xl')
+    .first()
+    .within(fn)
+
+// Success notifications overlap the fixed panel. Dismiss them before checking its
+// content; a native click tolerates a toast auto-dismissing during this iteration.
+const dismissToasts = () => {
+  cy.get('body').then(($body) => {
+    $body
+      .find('button[aria-label="Close notification"]')
+      .each((_, button) => (button as HTMLElement).click())
+  })
+  cy.get('button[aria-label="Close notification"]').should('not.exist')
+}
+
 describe('Stock Transfers', () => {
   beforeEach(() => {
     cy.loginByApi(email, password)
@@ -170,41 +178,47 @@ describe('Stock Transfers', () => {
     cy.contains('button', 'Nuevo traslado').click()
     cy.contains('h2', 'Nuevo traslado').should('be.visible')
 
-    // `force: true` on .select() skips Cypress's option-visibility assertion — a native <option>
-    // always reports 0x0, which otherwise trips the flake tracked in #548 (see purchase-receipts.cy.ts).
-    cy.get('select[aria-label="Origen"]').select(ids.source as string, { force: true })
-    cy.get('select[aria-label="Destino"]').select(ids.dest as string, { force: true })
-    cy.get('input[aria-label="Fecha del traslado"]').type('2026-09-05')
+    inPanel('Nuevo traslado', () => {
+      cy.get('select[aria-label="Origen"]').select(ids.source as string)
+      cy.get('select[aria-label="Destino"]').select(ids.dest as string)
+      cy.get('input[aria-label="Fecha del traslado"]').type('2026-09-05')
 
-    // The line's Variant picker is populated from the destination's assigned assortment — wait for
-    // the option to arrive before selecting it.
-    cy.get('select[aria-label="Variante línea 1"]', { timeout: 10_000 }).should('not.be.disabled')
-    cy.get(`select[aria-label="Variante línea 1"] option[value="${ids.variant}"]`, { timeout: 10_000 })
-      .should('exist')
-    cy.get('select[aria-label="Variante línea 1"]').select(ids.variant as string, { force: true })
-    cy.get('select[aria-label="Unidad línea 1"]').select(ids.uom as string, { force: true })
-    cy.get('input[aria-label="Cantidad línea 1"]').clear().type('12')
+      // The line's Variant picker is populated from the destination's assigned assortment — wait for
+      // the option to arrive before selecting it.
+      cy.get('select[aria-label="Variante línea 1"]', { timeout: 10_000 }).should('not.be.disabled')
+      cy.get(`select[aria-label="Variante línea 1"] option[value="${ids.variant}"]`, { timeout: 10_000 })
+        .should('exist')
+      cy.get('select[aria-label="Variante línea 1"]').select(ids.variant as string)
+      cy.get('select[aria-label="Unidad línea 1"]').select(ids.uom as string)
+      cy.get('input[aria-label="Cantidad línea 1"]').clear().type('12')
 
-    cy.contains('button', 'Crear traslado').click()
+      cy.contains('button', 'Crear traslado').click()
+    })
     cy.contains('Traslado creado', { timeout: 10_000 }).should('be.visible')
 
-    cy.contains('h2', 'Detalle del traslado').should('be.visible')
-    cy.contains('Borrador').should('be.visible')
-
-    cy.contains('button', 'Confirmar traslado').click()
+    dismissToasts()
+    inPanel('Detalle del traslado', () => {
+      cy.contains('span', /^Borrador$/).should('be.visible')
+      cy.contains('button', 'Confirmar traslado').click()
+    })
     cy.get('[role="alertdialog"]').contains('button', 'Confirmar').click()
     cy.contains('Traslado confirmado', { timeout: 10_000 }).should('be.visible')
 
-    cy.contains('Confirmado').should('be.visible')
-    cy.contains('button', 'Editar').should('not.exist')
-    cy.contains('no puede editarse').should('be.visible')
-
-    cy.contains('button', 'Revertir').click()
+    dismissToasts()
+    inPanel('Detalle del traslado', () => {
+      cy.contains('span', /^Confirmado$/).should('be.visible')
+      cy.contains('button', 'Editar').should('not.exist')
+      cy.contains('no puede editarse').should('be.visible')
+      cy.contains('button', 'Revertir').click()
+    })
     cy.get('#reverse_reason').type('Traslado de prueba Cypress')
     cy.get('[role="alertdialog"]').contains('button', 'Revertir').click()
     cy.contains('Traslado revertido', { timeout: 10_000 }).should('be.visible')
 
-    cy.contains('Revertido').should('be.visible')
-    cy.contains('Traslado de prueba Cypress').should('be.visible')
+    dismissToasts()
+    inPanel('Detalle del traslado', () => {
+      cy.contains('span', /^Revertido$/).should('be.visible')
+      cy.contains('Traslado de prueba Cypress').should('be.visible')
+    })
   })
 })
