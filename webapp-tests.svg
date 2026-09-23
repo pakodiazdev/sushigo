@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="117" height="20" viewBox="0 0 117 20" role="img" aria-label="tests: 4732 tests"><style>
+      .label-bg { fill: #555; }
+      .msg-bg { fill: #2da44e; }
+      @media (prefers-color-scheme: dark) {
+        .label-bg { fill: #30363d; }
+        .msg-bg { fill: #3fb950; }
+      }
+      text { font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; fill: #fff; }
+    </style><rect class="label-bg" width="43" height="20" rx="3"/><rect class="label-bg" x="40" width="3" height="20"/><rect class="msg-bg" x="43" width="74" height="20" rx="3"/><rect class="msg-bg" x="43" width="3" height="20"/><text x="21.5" y="14" font-size="11" text-anchor="middle">tests</text><text x="80" y="14" font-size="11" text-anchor="middle">4732 tests</text></svg>
