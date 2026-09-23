@@ -1,5 +1,152 @@
 name: Deploy Preview (manual)
 
+# QA/Preview manual deploy (#634, per TD-07 — doc/decisions/td-07-environment-release-promotion-
+# contract.md). Stays manual/branch-addressable — no automatic trigger from `main` — and remains
+# fully decoupled from the automated Demo/Production pipelines (#635/#636): this workflow neither
+# consumes nor produces anything they depend on.
+#
+# Four jobs:
+#   resolve-ref — resolves `inputs.ref` (a mutable branch/tag name, or already a SHA) to one
+#                 immutable commit SHA, exactly once, so every other job checks out the *same*
+#                 commit even if the input names a branch that moves mid-run (Codex finding,
+#                 2026-09-19: independent per-job checkouts of a moving branch could otherwise
+#                 build commit A while migrating commit B). Also validates inputs.service_suffix
+#                 and inputs.region here, before migrate ever touches the shared QA database for a
+#                 ref that couldn't actually deploy (Codex findings, 2026-09-23).
+#   build       — builds and pushes the `preview` image for that resolved commit.
+#   migrate     — runs `php artisan migrate --force` against QA's database (Supabase, reachable over
+#                 the public internet — no Cloud SQL proxy/VPC needed) for that same resolved commit,
+#                 once per dispatch, without the ancestry/watermark guard Demo/Production require (a
+#                 human explicitly picking an older branch for QA is not the hazard an automated
+#                 silent revert would be). Runs in its own database-scoped concurrency group,
+#                 independent of the deploy job's per-service_suffix group (see "Concurrency" below),
+#                 and only after `build` succeeds (Codex finding, 2026-09-19: migrating before build
+#                 is confirmed buildable risks altering the shared QA database for a ref that can
+#                 never actually be deployed, leaving the currently-serving revision running against
+#                 a schema — possibly post a destructive migration — it was never validated against).
+#   deploy      — deploys the built image to Cloud Run with its DB config and OAuth key secrets
+#                 explicitly bound (see "Deploy configuration" below — without this, a brand-new
+#                 service_suffix boots with none of that and never starts), polls /api/v1/health
+#                 until the new revision is actually serving, then (same job — see "Concurrency"
+#                 below for why) runs .github/scripts/deploy-smoke-test.sh against the deployed URL:
+#                 SPA availability, login, /me, and representative Employees/Items/Stock reads.
+#
+# migrate now needs both resolve-ref and build (no longer runs in parallel with build — see above),
+# and must complete before deploy exercises the new revision. Any job's failure fails the whole run
+# and is surfaced in $GITHUB_STEP_SUMMARY.
+#
+# ── Seeding — deliberate exception to TD-07's "never automatic" rule (see deployment.md) ────────
+# The migrate job also runs `Database\Seeders\Production\ProductionSeeder` (roles, permissions,
+# Passport OAuth clients, the default admin user, branch/operating-unit/cash-register base data)
+# with `--force`, on every dispatch. TD-07 and #634 originally required seeding to stay a separate,
+# explicitly-invoked step, never automatic — this project owner explicitly overrode that for QA
+# specifically, after confirming every seeder in ProductionSeeder's chain guards itself against
+# duplicates internally (updateOrCreate/exists() checks), so repeated --force runs are safe even
+# though --force itself bypasses this codebase's own TrackableSeeder run-once/lock tracking. See
+# deployment.md's "QA: manual, decoupled" section for the full rationale. `preview` is not in
+# config/seeders.php's environment map, so the specific class is targeted directly via `--class`
+# rather than the environment-routed `db:seed` — this does not require any API code change.
+#
+# ── Concurrency — two independent locks, not one ──────────────────────────────────────────────
+# - Workflow-level default, `preview-deploy-<repo>-<service_suffix|default>` (moved here from a
+#   deploy-job-level override, Codex finding, 2026-09-23 — see that block's comment): spans the
+#   FULL resolve-ref → build → deploy(+smoke, same job — see below for why they're one job, not
+#   two) chain for a given suffix, so two same-suffix dispatches can't race each other through the
+#   earlier jobs to reach deploy in the wrong order.
+# - migrate job overrides that default with its own group, `qa-migrate-<repo>` — independent of
+#   service_suffix, since every QA-suffixed service shares one Supabase database; without this,
+#   two differently-suffixed dispatches could still race `php artisan migrate` against that shared
+#   database even though their deploy steps never collide.
+#
+# **Known limitation, accepted (Codex finding, 2026-09-23):** both groups above are GitHub Actions
+# native `concurrency:` — which holds at most one RUNNING and one PENDING member per group, not an
+# arbitrary-depth queue (see GitHub's own concurrency docs). A third dispatch that shares a group
+# with two already in flight (three different suffixes queuing on `qa-migrate`, or a third same-
+# suffix retry) cancels the existing PENDING member instead of queuing behind it — that operator's
+# explicitly requested run is silently canceled before migrating or deploying anything. Closing
+# this properly needs a real external mutex/queue (GitHub Actions' primitive has no such mode);
+# for a human-triggered, low-frequency manual workflow, the fix's cost isn't judged worth paying
+# right now. Revisit if 3+-deep concurrent dispatches become common enough to cause real friction.
+#
+# ── Migration lock duration — decision (#634) ─────────────────────────────────────────────────
+# The lock above is held only for the migration step itself, not through the manual-validation
+# window that follows a deploy. See doc/conventions/ci/deployment.md's "QA: manual, decoupled"
+# section for the full rationale (this was TD-07's explicitly open design question) — in short:
+# QA data is disposable by design, nothing in this pipeline can signal "a human is done testing" to
+# release a longer-held lock, and each service_suffix getting its own isolated/resettable database
+# is a materially larger infrastructure change than this issue's scope. The known trade-off: a
+# second suffix's migration can still land on the shared database mid-manual-test of an earlier
+# suffix. Revisit with per-suffix isolated databases if this causes real friction.
+#
+# ── New configuration this workflow requires, scoped to the `qa` GitHub Environment ─────────────
+# (Settings → Environments → qa — no required reviewers, no branch restriction: QA deploys from
+# any branch per TD-07, so a deployment_branch_policy would block exactly the flow this workflow
+# exists for. `migrate` and `deploy` (which now also runs the smoke test — see "Concurrency" below
+# for why) declare `environment: qa` so these resolve without a QA_ prefix — Demo/Production will
+# get their own `demo`/`production` environments later with the *same* secret/var names, scoped
+# independently, per deployment.md's environment table.)
+# vars:    SMOKE_TEST_EMAIL, DB_PORT (defaults to 5432 if unset), QA_APP_URL (defaults to
+#          https://preview.sushigo-romita.com if unset — the seed step's APP_URL override)
+# secrets: DB_HOST, DB_DATABASE, DB_USERNAME, DB_PASSWORD, APP_KEY, SMOKE_TEST_PASSWORD,
+#          SEEDER_ADMIN_PASSWORD, SEEDER_EMPLOYEE_PASSWORD, SEEDER_INVENTORY_PASSWORD (same three
+#          env vars config/seeders.php already reads — see code/api/config/seeders.php:15-18 —
+#          set here so the *first* seeding run creates the default users with a real chosen
+#          password instead of falling back to the hardcoded default)
+#
+# `build` intentionally does NOT declare `environment: qa` — it only uses the pre-existing,
+# already-shared vars (GCP_PROJECT_ID, AR_LOCATION, AR_REPO, IMAGE_NAME_PREVIEW, API_URL_PREVIEW),
+# none of which are QA-exclusive (`sushigo-api-preview` is built once and used by *both* QA and
+# Demo, per deployment.md's registry table).
+#
+# ── Deploy configuration — binds the SAME GCP Secret Manager secrets the service already used ────
+# `gcloud run deploy` originally set nothing beyond `--image`/`--region`, relying on Cloud Run
+# inheriting the previous revision's config — which only works for the *existing* default service,
+# and even then can silently point at a stale database if that config was ever changed by hand
+# (discovered while testing #634 for real: the existing `sushigo-preview` revision's inherited
+# `DB_HOST` pointed at a Supabase project that no longer resolved). A brand-new `service_suffix`
+# has no previous revision at all, so it boots with **no** DB config and **no** OAuth keys —
+# `entrypoint.sh`'s `copy_secret_file` retries 5 times, fails, and the container never reaches
+# `apache2-foreground`, which Cloud Run reports as "failed to start and listen on the port".
+#
+# `deploy` now explicitly passes `--set-secrets` for every sensitive value, referencing the exact
+# same Secret Manager secret **names** the service was already using (confirmed via `gcloud run
+# services describe sushigo-preview --format=yaml`): `APP_KEY=PREVIEW_APP_KEY:latest`,
+# `DB_HOST=PREVIEW_DB_HOST:latest`, `DB_DATABASE=PREVIEW_DB_DATABASE:latest`,
+# `DB_USERNAME=PREVIEW_DB_USER:latest`, `DB_PASSWORD=PREVIEW_DB_PASS:latest`, plus the OAuth pair
+# at the exact paths `entrypoint.sh` expects
+# (`/run/secrets/oauth_{private,public}/value.key=PREVIEW_OAUTH_{PRIVATE,PUBLIC}:latest`).
+# **This must reference secrets, not plain `--set-env-vars`/`--env-vars-file` literals** — these
+# variable names were already bound as Secret Manager references on the existing service, and
+# `gcloud run deploy` refuses to flip an existing variable's type ("Cannot update environment
+# variable [DB_HOST] to string literal because it has already been set with a different type"),
+# confirmed empirically while implementing this. `DB_CONNECTION=pgsql` is the one plain literal,
+# matching what the service already had (Laravel's own DB_CONNECTION default is `sqlite`, not
+# `pgsql`, so this must stay explicit) — passed via `--update-env-vars`, not `--set-env-vars`
+# (Codex finding, 2026-09-20: `--set-env-vars` **replaces the entire environment-variable set**,
+# so it would silently delete every other existing plain var — `APP_URL` included — on each
+# deploy; `--update-env-vars` merges instead).
+#
+# `--service-account` is also now explicit (Codex finding, 2026-09-20): confirmed via `gcloud run
+# services describe sushigo-preview` that the existing service already runs as the **default**
+# Compute Engine service account (`<project-number>-compute@developer.gserviceaccount.com`, which
+# is why `--set-secrets` already worked for it — that identity already has
+# `secretmanager.secretAccessor` on the `PREVIEW_*` secrets). A brand-new `service_suffix`, with no
+# previous revision to inherit a service account from, would otherwise get the *same* default
+# identity implicitly, but leaving it implicit means a future org policy or GCP default change
+# could silently break new suffixes without ever touching this file. Binding it explicitly via
+# `${{ vars.GCP_PROJECT_NUMBER }}-compute@developer.gserviceaccount.com` removes that ambiguity.
+#
+# **Known duplication, not yet unified:** the `qa` GitHub Environment's `DB_HOST`/`DB_DATABASE`/
+# `DB_USERNAME`/`DB_PASSWORD`/`APP_KEY` (used by `migrate`, which runs on the bare GitHub Actions
+# runner and needs literal values) and these `PREVIEW_*` GCP Secret Manager secrets (used by
+# `deploy`, which needs secret *references*) must be kept in sync by hand — updating one without
+# the other reintroduces exactly the "migrate and the deployed app talk to different databases"
+# bug this fix closes. See deployment.md's "Deploy now explicitly sets DB config..." note for the
+# full rationale and a possible future unification (`migrate` reading from Secret Manager too).
+# The deploying identity (`gha-sushigo-preview@sushigo-app.iam.gserviceaccount.com`) needs
+# `roles/secretmanager.secretAccessor` on all five `PREVIEW_*` secrets for `--set-secrets` to
+# succeed.
+
 on:
   workflow_dispatch:
     inputs:
@@ -8,7 +155,7 @@ on:
         required: true
         default: "main"
       service_suffix:
-        description: "Optional suffix (e.g. feat-login). Leave empty to reuse preview service."
+        description: "Optional suffix, lowercase letters/digits/hyphens only, e.g. feat-login (rejected, not auto-corrected, if not already in this form). Leave empty to reuse preview service."
         required: false
         default: ""
       region:
@@ -20,28 +167,152 @@ permissions:
   id-token: write
   contents: read
 
+# Workflow-level default: holds the canonical per-suffix lock across the FULL resolve-ref → build →
+# deploy (→ smoke, same job) chain, not only the final job (Codex finding, 2026-09-23). A job-level
+# concurrency group is evaluated only once that job starts, so with two same-suffix dispatches (run
+# A, run B), each one's resolve-ref/build could previously finish in either order regardless of
+# which run was dispatched first — whichever one reached the (formerly job-scoped) deploy lock
+# FIRST deployed first, and once it released the lock the OTHER run then deployed too, silently
+# overwriting it — possibly leaving an older ref serving even though it was dispatched earlier. A
+# workflow-level group is resolved before ANY job runs, so it queues entire runs in dispatch order
+# instead. Safe to key on the RAW
+# inputs.service_suffix here (unlike deploy's previous job-level override, which had to use
+# resolve-ref's sanitized output instead) because "Validate service suffix" above now rejects any
+# non-canonical input instead of normalizing it — raw and canonical are identical by construction,
+# so there's no drift between this lock's key and the Cloud Run service name deploy computes from
+# the same value. The migrate job below still declares its OWN job-level concurrency (the
+# database-wide qa-migrate-<repo> group, independent of suffix) — a job's own `concurrency:` block
+# overrides this workflow-level default for that job, which is deliberate: migrate must serialize
+# against every OTHER suffix's migration too, not just same-suffix runs.
 concurrency:
   group: preview-deploy-${{ github.repository }}-${{ inputs.service_suffix || 'default' }}
   cancel-in-progress: false
 
 jobs:
-  deploy-preview:
+  resolve-ref:
+    name: resolve-ref
     runs-on: ubuntu-latest
-
-    env:
-      GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
-      GCP_REGION: ${{ inputs.region != '' && inputs.region || vars.GCP_REGION }}
-      BASE_SERVICE: ${{ vars.CLOUD_RUN_SERVICE_PREVIEW }}
-
-      AR_LOCATION: ${{ vars.AR_LOCATION }}
-      AR_REPO: ${{ vars.AR_REPO }}
-      IMAGE_NAME: ${{ vars.IMAGE_NAME_PREVIEW }}
-
+    outputs:
+      sha: ${{ steps.resolve.outputs.sha }}
+      service_suffix: ${{ steps.suffix.outputs.suffix }}
     steps:
       - name: Checkout selected ref
         uses: actions/checkout@v4
         with:
           ref: ${{ inputs.ref }}
+          fetch-depth: 1
+
+      - name: Resolve to an immutable commit SHA
+        id: resolve
+        run: |
+          set -euo pipefail
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Validate service suffix
+        id: suffix
+        env:
+          # Pre-existing command-injection hazard (predates #634, flagged by Devin review on this
+          # PR): a crafted workflow_dispatch input interpolated directly into a run script's
+          # literal text could execute arbitrary shell with this job's credentials. Passed via
+          # env: instead, so bash only ever sees the raw dispatch input as data.
+          SERVICE_SUFFIX_INPUT: ${{ inputs.service_suffix }}
+          BASE_SERVICE_INPUT: ${{ vars.CLOUD_RUN_SERVICE_PREVIEW }}
+        run: |
+          set -euo pipefail
+          # STRICT validation, not lowercase/character normalization (Codex finding, 2026-09-23,
+          # on the previous fix): the workflow-level concurrency group below has to be computed
+          # before any job runs — including this one — so it can only ever key off the RAW
+          # inputs.service_suffix, never a value a step sanitizes. Auto-normalizing here (the
+          # previous behavior: lowercase + replace disallowed characters) meant two differently-
+          # spelled raw inputs (e.g. "feature_one" and "feature-one") could sanitize to the SAME
+          # Cloud Run service name while the raw-keyed workflow lock still treated them as
+          # different suffixes — reopening the exact equivalent-suffix race an earlier round closed
+          # by unifying sanitization into this step. Requiring the raw input to already be
+          # canonical (reject, don't transform) makes raw and "sanitized" identical by
+          # construction, so the workflow-level lock is automatically correct with no drift
+          # possible — at the cost of less forgiving input (typos are now a hard error instead of
+          # silently auto-corrected). [[ =~ ]] tests the whole string in one match, so this also
+          # rejects an embedded newline outright (the charset excludes it) without a separate check.
+          #
+          # Validates the FULL assembled Cloud Run service name, not just the suffix in isolation
+          # (Codex finding, 2026-09-23): a charset-only suffix check like `^[a-z0-9-]{1,40}$` still
+          # accepted values such as "feature-" or "-", which produce a service name ending in a
+          # hyphen — invalid per Cloud Run's RFC-1035-label naming rules (must start with a letter,
+          # end with a letter or digit) — and didn't account for the combined
+          # "${BASE_SERVICE}-${suf}" name's 63-character limit either. Both are now caught here,
+          # in resolve-ref, before build/migrate spend any work on a ref that could never actually
+          # deploy — matching this file's existing "migrate needs build" rationale of not touching
+          # the shared QA database for a run that can't be deployed.
+          suf="${SERVICE_SUFFIX_INPUT}"
+          if [ -n "${suf}" ] && [[ ! "${suf}" =~ ^[a-z0-9-]{1,40}$ ]]; then
+            echo "::error::service_suffix must already be a valid Cloud Run service-name suffix — lowercase letters, digits, and hyphens only, 1-40 characters (got '${suf}')"
+            exit 1
+          fi
+
+          svc="${BASE_SERVICE_INPUT}"
+          if [ -n "${suf}" ]; then
+            svc="${BASE_SERVICE_INPUT}-${suf}"
+          fi
+          if [[ ! "${svc}" =~ ^[a-z]([a-z0-9-]*[a-z0-9])?$ ]] || [ "${#svc}" -gt 63 ]; then
+            echo "::error::assembled Cloud Run service name '${svc}' is invalid — must start with a lowercase letter, end with a letter or digit, contain only lowercase letters/digits/hyphens, and be at most 63 characters"
+            exit 1
+          fi
+          echo "suffix=${suf}" >> "$GITHUB_OUTPUT"
+
+      - name: Auth to Google Cloud (WIF)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: projects/${{ vars.GCP_PROJECT_NUMBER }}/locations/global/workloadIdentityPools/github-pool/providers/github-provider
+          service_account: gha-sushigo-preview@sushigo-app.iam.gserviceaccount.com
+
+      - name: Setup gcloud
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ vars.GCP_PROJECT_ID }}
+
+      - name: Validate target region
+        env:
+          GCP_REGION_INPUT: ${{ inputs.region != '' && inputs.region || vars.GCP_REGION }}
+        run: |
+          set -euo pipefail
+          # Validated here, in resolve-ref, before migrate touches the shared QA database (Codex
+          # finding, 2026-09-23) — same rationale as the service-name check above: without this, an
+          # invalid or typo'd inputs.region isn't exercised until deploy's own `gcloud run deploy
+          # --region` step, by which point migrate has already committed schema changes for a
+          # revision that then fails to deploy, leaving the existing revision serving against the
+          # new schema. `gcloud run regions list` is the authoritative source for which regions
+          # actually support Cloud Run (a syntactically valid but unsupported region, e.g. a
+          # decommissioned or GCE-only region, isn't catchable by a format-only regex check).
+          #
+          # -F (fixed-string), not a bare regex match (Codex finding, 2026-09-23, on this same
+          # check): plain `grep -qx` treats GCP_REGION_INPUT as a basic regular expression, so a
+          # typo like "us-central." (a literal dot instead of the digit) would match the real
+          # "us-central1" — `.` means "any character" in BRE — validating an invalid region as if
+          # it were the exact one on the list.
+          if ! gcloud run regions list --format='value(locationId)' | grep -Fqx -- "${GCP_REGION_INPUT}"; then
+            echo "::error::'${GCP_REGION_INPUT}' is not a region Cloud Run supports — see \`gcloud run regions list\`"
+            exit 1
+          fi
+
+  build:
+    name: build
+    needs: resolve-ref
+    runs-on: ubuntu-latest
+    outputs:
+      image_uri: ${{ steps.image.outputs.image_uri }}
+      sha: ${{ steps.image.outputs.sha }}
+
+    env:
+      GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+      AR_LOCATION: ${{ vars.AR_LOCATION }}
+      AR_REPO: ${{ vars.AR_REPO }}
+      IMAGE_NAME: ${{ vars.IMAGE_NAME_PREVIEW }}
+
+    steps:
+      - name: Checkout resolved commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.resolve-ref.outputs.sha }}
 
       - name: Auth to Google Cloud (WIF)
         uses: google-github-actions/auth@v2
@@ -56,32 +327,22 @@ jobs:
 
       - name: Configure Docker auth for Artifact Registry
         run: |
+          set -euo pipefail
           gcloud auth configure-docker "${AR_LOCATION}-docker.pkg.dev" --quiet
 
-      - name: Compute service name
-        id: svc
-        run: |
-          set -euo pipefail
-          svc="${BASE_SERVICE}"
-          if [ -n "${{ inputs.service_suffix }}" ]; then
-            suf="$(echo "${{ inputs.service_suffix }}" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9-]+/-/g' | sed -E 's/^-+|-+$//g')"
-            svc="${BASE_SERVICE}-${suf}"
-          fi
-          echo "service=${svc}" >> "$GITHUB_OUTPUT"
-          echo "SERVICE=${svc}" >> "$GITHUB_ENV"
-
-      - name: Compute image tag
+      - name: Compute image URI
+        id: image
         run: |
           set -euo pipefail
           SHA="$(git rev-parse --short=12 HEAD)"
-          echo "SHA=preview-${SHA}" >> "$GITHUB_ENV"
+          IMAGE_URI="${AR_LOCATION}-docker.pkg.dev/${GCP_PROJECT_ID}/${AR_REPO}/${IMAGE_NAME}:preview-${SHA}"
+          echo "sha=${SHA}" >> "$GITHUB_OUTPUT"
+          echo "image_uri=${IMAGE_URI}" >> "$GITHUB_OUTPUT"
+          echo "IMAGE_URI=${IMAGE_URI}" >> "$GITHUB_ENV"
 
       - name: Build image
         run: |
           set -euo pipefail
-          IMAGE_URI="${AR_LOCATION}-docker.pkg.dev/${GCP_PROJECT_ID}/${AR_REPO}/${IMAGE_NAME}:${SHA}"
-          echo "IMAGE_URI=${IMAGE_URI}" >> "$GITHUB_ENV"
-
           docker build \
             -f docker/app/Dockerfile \
             --target preview \
@@ -94,6 +355,172 @@ jobs:
           set -euo pipefail
           docker push "${IMAGE_URI}"
 
+  migrate:
+    name: migrate
+    needs: [resolve-ref, build]
+    runs-on: ubuntu-latest
+    environment: qa
+    concurrency:
+      group: qa-migrate-${{ github.repository }}
+      cancel-in-progress: false
+    defaults:
+      run:
+        working-directory: code/api
+    env:
+      # Real process env vars, not text written into .env — a password containing dotenv syntax
+      # (whitespace, quotes, `#`, `${NAME}`) would otherwise be reparsed differently than the raw
+      # secret value once Laravel's dotenv loader reads it back (Codex finding, 2026-09-19).
+      # phpdotenv's immutable loader never overrides an already-set env var, so these reach
+      # config/database.php's env() calls unchanged, with no textual round-trip at all.
+      APP_KEY: ${{ secrets.APP_KEY }}
+      DB_CONNECTION: pgsql
+      DB_HOST: ${{ secrets.DB_HOST }}
+      DB_PORT: ${{ vars.DB_PORT || '5432' }}
+      DB_DATABASE: ${{ secrets.DB_DATABASE }}
+      DB_USERNAME: ${{ secrets.DB_USERNAME }}
+      DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+      # Override .env.example's local-dev defaults before seeding (Codex finding, 2026-09-23):
+      # left unset, APP_ENV stayed "local" and APP_URL stayed "https://api.sushigo.local" through
+      # the seed step, so on a fresh QA database SeedsPassportClients baked config('app.url') —
+      # i.e. that local placeholder — into oauth_clients.redirect_uris permanently (re-seeds are
+      # no-ops once the client rows exist, so this doesn't self-heal), and TrackableSeeder recorded
+      # every run under the "local" environment. The later Cloud Run APP_URL update only changes
+      # the *runtime* container's env, not these already-written rows. QA_APP_URL is a dedicated
+      # var (not vars.API_URL_PREVIEW — a second Codex finding caught that it's documented at
+      # doc/tasks/2026-09/633-per-environment-release-images.md:33 as the deliberately *relative*
+      # frontend build path `/api/v1`, not an absolute URL; reusing it here would have baked
+      # `redirect_uris: ["/api/v1"]` into the database, arguably worse than the original local
+      # placeholder), defaulting to the documented default-service domain
+      # (doc/conventions/ci/deployment.md's environment table) so this doesn't hard-fail before the
+      # project owner provisions it. Not exact for a suffixed service's own URL (still unknown
+      # until deploy assigns it), but a real absolute QA URL instead of a relative path or a local
+      # placeholder, and needs no reordering against the deploy job that discovers the per-suffix
+      # URL later.
+      APP_ENV: qa
+      APP_URL: ${{ vars.QA_APP_URL || 'https://preview.sushigo-romita.com' }}
+
+    steps:
+      - name: Checkout resolved commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.resolve-ref.outputs.sha }}
+
+      - name: Setup PHP 8.5
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          coverage: none
+
+      - name: Install Composer dependencies
+        run: composer install --prefer-dist --no-interaction --no-progress --no-scripts --no-dev
+
+      - name: Prepare .env
+        run: cp .env.example .env
+
+      - name: Validate required QA seeder secrets
+        env:
+          SEEDER_ADMIN_PASSWORD: ${{ secrets.SEEDER_ADMIN_PASSWORD }}
+          SEEDER_EMPLOYEE_PASSWORD: ${{ secrets.SEEDER_EMPLOYEE_PASSWORD }}
+          SEEDER_INVENTORY_PASSWORD: ${{ secrets.SEEDER_INVENTORY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          # Runs BEFORE migration, not inside the seed step (Codex finding, 2026-09-23, on the
+          # previous fix): the seed step's own check still ran after `php artisan migrate --force`
+          # had already committed schema changes, so an absent secret aborted the job with QA's
+          # schema already migrated but the old Cloud Run revision — never rebuilt against it —
+          # left serving. Failing here, before migration runs, keeps a missing secret from
+          # stranding QA on a migrated-but-undeployed schema. Fail loud instead of silently seeding
+          # QA's publicly-reachable (--allow-unauthenticated) service with a known password:
+          # config/seeders.php falls back to the hardcoded, publicly-documented defaults
+          # (admin123456/employee123456/inventory123456 — see CLAUDE.md's own Test Users table)
+          # whenever these env vars are unset or empty, which these are already supposed to
+          # override with a real chosen password (see deployment.md's "New configuration" note).
+          : "${SEEDER_ADMIN_PASSWORD:?SEEDER_ADMIN_PASSWORD secret is required — set it in the qa GitHub Environment}"
+          : "${SEEDER_EMPLOYEE_PASSWORD:?SEEDER_EMPLOYEE_PASSWORD secret is required — set it in the qa GitHub Environment}"
+          : "${SEEDER_INVENTORY_PASSWORD:?SEEDER_INVENTORY_PASSWORD secret is required — set it in the qa GitHub Environment}"
+
+      - name: Run migration (one-shot, forward-only)
+        run: php artisan migrate --force
+
+      - name: Seed QA base data (idempotent — safe to run every deploy)
+        env:
+          SEEDER_ADMIN_PASSWORD: ${{ secrets.SEEDER_ADMIN_PASSWORD }}
+          SEEDER_EMPLOYEE_PASSWORD: ${{ secrets.SEEDER_EMPLOYEE_PASSWORD }}
+          SEEDER_INVENTORY_PASSWORD: ${{ secrets.SEEDER_INVENTORY_PASSWORD }}
+        run: php artisan db:seed --class="Database\Seeders\Production\ProductionSeeder" --force
+
+      - name: Migration/seed summary
+        if: always()
+        env:
+          # Same command-injection hazard as "Compute service name" above — inputs.ref is a free-
+          # text workflow_dispatch field, so it must reach bash as data via env:, never spliced
+          # directly into this script's literal text.
+          REF_INPUT: ${{ inputs.ref }}
+        run: |
+          {
+            echo "### 🗄️ QA migration + seed — ref \`${REF_INPUT}\`"
+            echo ""
+            if [ "${{ job.status }}" = "success" ]; then
+              echo "- ✅ \`php artisan migrate --force\` completed"
+              echo "- ✅ \`ProductionSeeder\` completed (roles, permissions, admin user, base data)"
+            else
+              echo "- ❌ Migration or seeding failed — see job logs"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  deploy:
+    name: deploy
+    needs: [build, migrate, resolve-ref]
+    runs-on: ubuntu-latest
+    environment: qa
+    # No job-level concurrency override here (Codex finding, 2026-09-23, superseding the previous
+    # two fixes at this spot): this job now deliberately inherits the workflow-level default above
+    # instead of declaring its own group. Declaring one here — even keyed correctly off
+    # resolve-ref's sanitized suffix, as the previous fix did — only closes the race from the
+    # moment THIS job starts; resolve-ref and build still ran outside any lock, so two same-suffix
+    # runs could still reach this job's gate in either order. Inheriting the workflow-level lock
+    # instead means resolve-ref/build queue under the same group deploy(+smoke) does, closing that
+    # gap too. See the workflow-level `concurrency:` block above for the full rationale.
+    outputs:
+      service_url: ${{ steps.url.outputs.service_url }}
+      revision: ${{ steps.app_url.outputs.revision }}
+
+    env:
+      GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+      GCP_REGION: ${{ inputs.region != '' && inputs.region || vars.GCP_REGION }}
+      BASE_SERVICE: ${{ vars.CLOUD_RUN_SERVICE_PREVIEW }}
+      IMAGE_URI: ${{ needs.build.outputs.image_uri }}
+      DB_PORT: ${{ vars.DB_PORT || '5432' }}
+
+    steps:
+      - name: Auth to Google Cloud (WIF)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: projects/${{ vars.GCP_PROJECT_NUMBER }}/locations/global/workloadIdentityPools/github-pool/providers/github-provider
+          service_account: gha-sushigo-preview@sushigo-app.iam.gserviceaccount.com
+
+      - name: Setup gcloud
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.GCP_PROJECT_ID }}
+
+      - name: Compute service name
+        id: svc
+        run: |
+          set -euo pipefail
+          # Uses resolve-ref's already-validated service_suffix output (not the raw
+          # inputs.service_suffix directly) so this job's service name matches the value the
+          # workflow-level concurrency group above is keyed on — see that block's comment. Safe to
+          # interpolate directly: the validated value is constrained to `[a-z0-9-]{1,40}` or empty,
+          # so it contains none of the shell metacharacters the raw dispatch input could.
+          suf="${{ needs.resolve-ref.outputs.service_suffix }}"
+          svc="${BASE_SERVICE}"
+          if [ -n "${suf}" ]; then
+            svc="${BASE_SERVICE}-${suf}"
+          fi
+          echo "service=${svc}" >> "$GITHUB_OUTPUT"
+          echo "SERVICE=${svc}" >> "$GITHUB_ENV"
+
       - name: Deploy to Cloud Run (preview)
         run: |
           set -euo pipefail
@@ -102,10 +529,94 @@ jobs:
             --region "${GCP_REGION}" \
             --platform managed \
             --allow-unauthenticated \
+            --service-account "${{ vars.GCP_PROJECT_NUMBER }}-compute@developer.gserviceaccount.com" \
+            --update-env-vars "DB_CONNECTION=pgsql,DB_PORT=${DB_PORT}" \
+            --set-secrets "APP_KEY=PREVIEW_APP_KEY:latest,DB_HOST=PREVIEW_DB_HOST:latest,DB_DATABASE=PREVIEW_DB_DATABASE:latest,DB_USERNAME=PREVIEW_DB_USER:latest,DB_PASSWORD=PREVIEW_DB_PASS:latest,/run/secrets/oauth_private/value.key=PREVIEW_OAUTH_PRIVATE:latest,/run/secrets/oauth_public/value.key=PREVIEW_OAUTH_PUBLIC:latest" \
             --quiet
 
       - name: Show service URL
+        id: url
         run: |
           set -euo pipefail
           URL="$(gcloud run services describe "${SERVICE}" --region "${GCP_REGION}" --format='value(status.url)')"
           echo "Preview URL: ${URL}"
+          echo "service_url=${URL}" >> "$GITHUB_OUTPUT"
+
+      - name: Set APP_URL on the deployed revision
+        id: app_url
+        run: |
+          set -euo pipefail
+          # Patched in as its own step, after the service's real URL is known (Codex finding,
+          # 2026-09-23): the previous approach predicted the URL from BASE_SERVICE's own URL in
+          # GCP_REGION, which fails outright when inputs.region overrides to a region the default
+          # service was never deployed to. Reading the URL Cloud Run actually assigned works
+          # unconditionally — no dependency on BASE_SERVICE or the target region — at the cost of
+          # one extra revision update.
+          gcloud run services update "${SERVICE}" \
+            --region "${GCP_REGION}" \
+            --update-env-vars "APP_URL=${{ steps.url.outputs.service_url }}" \
+            --quiet
+
+          # Capture the revision AFTER this update, not before (Codex finding, 2026-09-23): this
+          # command itself creates a new Cloud Run revision, so a revision name captured earlier
+          # (before APP_URL was set) would identify the image-only revision this one superseded —
+          # not the one the health check and smoke test below actually exercise.
+          REVISION="$(gcloud run services describe "${SERVICE}" --region "${GCP_REGION}" --format='value(status.latestReadyRevisionName)')"
+          echo "Revision: ${REVISION}"
+          echo "revision=${REVISION}" >> "$GITHUB_OUTPUT"
+
+      - name: Wait for API health check
+        run: |
+          set -euo pipefail
+          URL="${{ steps.url.outputs.service_url }}"
+          echo "Waiting for ${URL}/api/v1/health ..."
+          for i in $(seq 1 30); do
+            CODE="$(curl -s --max-time 10 -o /tmp/health.json -w '%{http_code}' "${URL}/api/v1/health" || echo "000")"
+            if [ "$CODE" = "200" ]; then
+              echo "✅ Health check passed on attempt ${i}"
+              exit 0
+            fi
+            echo "  attempt ${i}: HTTP ${CODE}, retrying in 5s..."
+            sleep 5
+          done
+          echo "❌ Health check did not pass after 30 attempts"
+          cat /tmp/health.json 2>/dev/null || true
+          exit 1
+
+      - name: Deploy summary
+        if: always()
+        run: |
+          {
+            echo "### 🚀 QA deploy — \`${{ steps.svc.outputs.service }}\`"
+            echo ""
+            echo "- **Commit**: \`${{ needs.build.outputs.sha }}\`"
+            echo "- **Image**: \`${IMAGE_URI}\`"
+            echo "- **Revision**: \`${{ steps.app_url.outputs.revision }}\`"
+            echo "- **URL**: ${{ steps.url.outputs.service_url }}"
+            if [ "${{ job.status }}" = "success" ]; then
+              echo "- ✅ Deploy + health check passed"
+            else
+              echo "- ❌ Deploy or health check failed — see job logs"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Checkout (for the smoke test script)
+        uses: actions/checkout@v4
+        # Deliberately NOT pinned to needs.resolve-ref.outputs.sha (Codex finding, 2026-09-23,
+        # reverting the previous round's fix at this exact spot): inputs.ref can name any branch,
+        # tag, or SHA — including one older than this PR, which introduced deploy-smoke-test.sh —
+        # and TD-07 explicitly requires QA to support deploying any ref, "main" being the default.
+        # Pinning to the resolved commit meant deploying such an older ref left the checkout
+        # without the script at all, failing the final `bash` step AFTER the image was already
+        # deployed. Defaulting (no `ref:`) checks out the ref that triggered THIS workflow run
+        # instead, which always has some copy of the script since it's the commit this very step is
+        # currently running from. Trade-off, accepted: a feature branch that also modifies
+        # deploy-smoke-test.sh gets smoke-tested with the triggering ref's copy of the script, not
+        # its own — narrower and less severe than a hard failure on every older-ref deploy.
+
+      - name: Run deployment smoke test
+        env:
+          BASE_URL: ${{ steps.url.outputs.service_url }}
+          SMOKE_TEST_EMAIL: ${{ vars.SMOKE_TEST_EMAIL }}
+          SMOKE_TEST_PASSWORD: ${{ secrets.SMOKE_TEST_PASSWORD }}
+        run: bash .github/scripts/deploy-smoke-test.sh

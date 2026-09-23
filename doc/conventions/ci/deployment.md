@@ -144,6 +144,209 @@ concurrency group independent of `service_suffix` (e.g. `qa-migrate-${{ github.r
 the deploy step's per-suffix group and the migration step's database-wide group are two different
 locks, not one.
 
+**Implemented (#634):** `deploy-preview.yml` now runs five jobs — `resolve-ref`, `build`, `migrate`,
+`deploy`, `smoke`. `resolve-ref` resolves `inputs.ref` (a mutable branch/tag name, or already a
+SHA) to one immutable commit SHA exactly once via a checkout + `git rev-parse HEAD`, and every
+other job that checks out code uses that resolved SHA instead of re-resolving `inputs.ref`
+independently (a Codex finding, 2026-09-19: independent per-job checkouts of a moving branch could
+otherwise build commit A while migrating commit B if a push landed between the two checkouts).
+`migrate` runs `php artisan migrate --force` directly on the GitHub Actions runner (not a Cloud Run
+Job): QA's database is Supabase, a managed Postgres reachable over the public internet — see
+`doc/architecture/infrastructure/infrastructure.en.md` §2/§6 — so no Cloud SQL Auth Proxy or VPC
+connector is needed. `migrate` needs both `resolve-ref` and `build` (another Codex finding,
+2026-09-19: migrating before build is confirmed buildable risks altering the shared QA database for
+a ref that can never actually be deployed, leaving the currently-serving revision running against a
+schema — possibly post a destructive migration — it was never validated against; this trades away
+the original build/migrate parallelism for that safety). `migrate` carries the `qa-migrate-${{
+github.repository }}` job-level concurrency group described above, independent of `deploy`'s
+per-suffix group; `deploy` (`needs: [build, migrate]`) only proceeds once migration has completed,
+satisfying "migration runs before the new revision is exercised". New configuration this requires
+is scoped to the **`qa` GitHub Environment** (Settings →
+Environments → `qa` — created for #634, no required reviewers, no branch restriction, since QA
+deploys from any branch by design): vars `SMOKE_TEST_EMAIL`; and secrets `DB_HOST`, `DB_DATABASE`,
+`DB_USERNAME`, `DB_PASSWORD`, `APP_KEY`, `SMOKE_TEST_PASSWORD`, `SEEDER_ADMIN_PASSWORD`,
+`SEEDER_EMPLOYEE_PASSWORD`, `SEEDER_INVENTORY_PASSWORD` (see "Seeding" below for the last three).
+Only `migrate` and `smoke` declare `environment: qa` — `build` uses purely pre-existing,
+already-shared repo-level vars (`GCP_PROJECT_ID`, `AR_LOCATION`, `AR_REPO`, `IMAGE_NAME_PREVIEW`,
+`API_URL_PREVIEW`), none of which are QA-exclusive (`sushigo-api-preview` is built once and used
+by both QA and Demo, per the registry table above); `deploy` doesn't declare it either — see
+below, it doesn't touch any GitHub secret at all. When Demo/Production (#635/#636) get their own
+`demo`/`production` GitHub Environments, they can reuse these same secret/var *names* scoped
+independently — no prefix needed, each environment supplies its own values.
+
+**Deploy now explicitly binds the existing Secret Manager secrets (discovered testing #634 for
+real, 2026-09-18/19):** `gcloud run deploy` originally passed nothing beyond `--image`/`--region`,
+relying on Cloud Run inheriting the previous revision's configuration — a real deploy attempt
+against a fresh `service_suffix` exposed why that's not enough: a brand-new Cloud Run service has
+**no** previous revision to inherit from, so it boots with no DB connection and no OAuth keys.
+`preview/entrypoint.sh`'s `copy_secret_file` (waiting for `/run/secrets/oauth_{private,public}/
+value.key`) retries 5 times, fails, and the container never reaches `apache2-foreground` —
+reported by Cloud Run as "container failed to start and listen on the port." Separately, even the
+*existing* default service's inherited `DB_HOST` turned out to be pointing at a Supabase project
+that no longer resolved, which the post-deploy health check caught immediately (`/api/v1/health`
+returning a database connection error) rather than silently serving against the wrong database.
+
+**First attempt at the fix was wrong, corrected empirically:** passing `DB_HOST`/`DB_PASSWORD`/etc.
+as plain literals via `--env-vars-file` failed with `Cannot update environment variable [DB_HOST]
+to string literal because it has already been set with a different type` — `gcloud run services
+describe sushigo-preview --format=yaml` confirmed these were already bound as Secret Manager
+references (`PREVIEW_APP_KEY`, `PREVIEW_DB_HOST`, `PREVIEW_DB_DATABASE`, `PREVIEW_DB_USER`,
+`PREVIEW_DB_PASS`), and Cloud Run refuses to flip an existing variable's type without first
+clearing it. `deploy` now passes, on every dispatch regardless of suffix:
+- `--update-env-vars "DB_CONNECTION=pgsql,DB_PORT=<resolved-port>"` — plain literals, matching what
+  the service already had (Laravel's own `DB_CONNECTION` default is `sqlite`, not `pgsql`, so this
+  must stay explicit). **Must be `--update-env-vars`, not `--set-env-vars`** (Codex finding,
+  2026-09-20): `--set-env-vars` replaces the *entire* environment-variable set, which would
+  silently delete every other existing plain var on the service — `APP_URL` included — on every
+  single deploy; `--update-env-vars` merges instead of replacing. **`DB_PORT` must be passed
+  explicitly too, not left to `--update-env-vars` to preserve** (second Codex finding,
+  2026-09-20): "merge with the existing config" only works for a service that already *has*
+  existing config — a brand-new `service_suffix` has nothing to merge with, so if `vars.DB_PORT`
+  were ever set to something other than `5432`, a fresh suffix would silently fall back to `5432`
+  while `migrate` used the real configured port. Resolved the same way `migrate` already does
+  (`${{ vars.DB_PORT || '5432' }}`) and passed on every deploy, new suffix or not.
+- `--set-secrets` referencing the exact same secret **names** already on the service:
+  `APP_KEY=PREVIEW_APP_KEY:latest`, `DB_HOST=PREVIEW_DB_HOST:latest`,
+  `DB_DATABASE=PREVIEW_DB_DATABASE:latest`, `DB_USERNAME=PREVIEW_DB_USER:latest`,
+  `DB_PASSWORD=PREVIEW_DB_PASS:latest`, plus the OAuth pair at the exact paths `entrypoint.sh`
+  expects (`/run/secrets/oauth_{private,public}/value.key=PREVIEW_OAUTH_{PRIVATE,PUBLIC}:latest`).
+  The deploying identity (`gha-sushigo-preview@sushigo-app.iam.gserviceaccount.com`) needs
+  `roles/secretmanager.secretAccessor` on all five `PREVIEW_*` secrets for this to succeed.
+- `--service-account "${{ vars.GCP_PROJECT_NUMBER }}-compute@developer.gserviceaccount.com"` —
+  explicit now (Codex finding, 2026-09-20): confirmed via `gcloud run services describe
+  sushigo-preview` that the existing service runs as the **default** Compute Engine service
+  account, which is *why* `--set-secrets` already worked for it (that identity already has
+  `secretmanager.secretAccessor` on the `PREVIEW_*` secrets). A brand-new `service_suffix` would
+  otherwise get that same default identity only *implicitly* (no previous revision to inherit an
+  explicit one from) — binding it explicitly removes the risk of a future GCP/org-policy default
+  change silently breaking new suffixes without any change to this file.
+
+**Known duplication, not yet unified:** the `qa` GitHub Environment's `DB_HOST`/`DB_DATABASE`/
+`DB_USERNAME`/`DB_PASSWORD`/`APP_KEY` (used by `migrate`, which runs on the bare GitHub Actions
+runner and needs literal values) and these `PREVIEW_*` GCP Secret Manager secrets (used by
+`deploy`, which needs secret *references*, not values) hold the **same real credentials** in two
+different stores that must be kept in sync by hand — updating the Supabase password in one without
+the other reintroduces exactly the "migrate and the deployed app talk to different databases" bug
+this fix closes. A future unification (e.g. `migrate` also authenticating to GCP and reading these
+same `PREVIEW_*` secrets via `gcloud secrets versions access`, instead of maintaining a separate
+GitHub-side copy) would remove this duplication — not done here, scoped as a follow-up rather than
+expanding #634 further.
+
+**`migrate` passes its DB config as real process env vars, never through a written `.env` file
+(Codex finding, 2026-09-19):** an earlier version of this fix wrote `DB_HOST`/`DB_PASSWORD`/etc.
+into `code/api/.env` via `echo "KEY=${VALUE}" >> .env`. A password containing dotenv-special syntax
+(whitespace, quotes, `#`, `${NAME}` interpolation) would be re-parsed differently once Laravel's
+`vlucas/phpdotenv` loader read that file back, silently connecting with different credentials than
+the configured secret, or failing outright. `migrate` now declares `APP_KEY`/`DB_CONNECTION`/
+`DB_HOST`/`DB_PORT`/`DB_DATABASE`/`DB_USERNAME`/`DB_PASSWORD` at the **job level** (`env:`), so
+every step's `php artisan` invocation receives them as real OS environment variables — phpdotenv's
+immutable loader never overrides an already-set env var, so these values reach
+`config/database.php`'s `env()` calls completely unchanged, with no textual serialization/parsing
+round-trip at all. The `Prepare .env` step still runs `cp .env.example .env` (Laravel expects the
+file to exist), but no secret value is ever written into it.
+
+### Seeding — deliberate, explicit exception to "never automatic" (#634 follow-up)
+
+Below, and in [TD-07](../../decisions/td-07-environment-release-promotion-contract.md)'s own
+"Migration ownership" section, `db:seed --force` is described as something that "must never run
+automatically... including QA." **For QA specifically, this project's owner explicitly overrode
+that** during #634's PR review, after this was implemented and before merge — this is a deliberate,
+informed correction, not an oversight or a silent drift from the original decision.
+
+**Why:** this was QA/Preview's first deploy through the new `migrate` job, and the database needed
+its base data (roles, permissions, Passport OAuth clients, the default admin user, branch/
+operating-unit/cash-register setup) bootstrapped before it could be used at all — a one-time manual
+seed would have worked too, but the owner preferred the workflow do it automatically going forward
+rather than relying on a human remembering to run it by hand after every fresh QA database.
+
+**Why this is safe despite `--force`:** `--force` bypasses this codebase's own `TrackableSeeder`
+run-once/lock tracking (`code/api/database/seeders/Traits/TrackableSeeder.php` — it checks
+`in_array('--force', $_SERVER['argv'])` and skips the "already ran" guard entirely when present).
+That would normally make repeated `--force` runs risky. Verified before implementing: every seeder
+in `Production\ProductionSeeder`'s chain — `PassportClientSeeder`, `RoleSeeder`, `PermissionSeeder`,
+`BranchSeeder`, `OperatingUnitSeeder`, `UserSeeder`, `InventoryLocationSeeder`,
+`CashTerminalSeeder`, `BankAccountSeeder`, `CashRegisterSeeder`, `UnitOfMeasureSeeder`,
+`UomConversionSeeder`, the punctuality/overtime/holiday seeders — guards itself internally
+(`updateOrCreate`, `firstOrCreate`, or an explicit `exists()` check before inserting), independent
+of `TrackableSeeder`'s own tracking. So running it on every deploy does not duplicate data even
+though the run-once lock itself is bypassed.
+
+**How:** the `migrate` job's "Seed QA base data" step runs
+`php artisan db:seed --class="Database\Seeders\Production\ProductionSeeder" --force` directly by
+class name — **not** the environment-routed `php artisan db:seed` — because `preview` (QA's
+`APP_ENV`) is not one of the keys in `code/api/config/seeders.php`'s `environments` map (only
+`production`, `local`, `development`, `dev`, `devtest`, `testing` are). Targeting the class directly
+means no API code change was needed to make this work.
+
+**`SEEDER_ADMIN_PASSWORD`/`SEEDER_EMPLOYEE_PASSWORD`/`SEEDER_INVENTORY_PASSWORD`** are the same three
+env vars `config/seeders.php:15-18` already reads (with hardcoded fallbacks `admin123456` /
+`employee123456` / `inventory123456`) — passed in via the step's `env:` block so the first real
+seeding run creates `admin@sushigo.com` / `manager@sushigo.com` / `inventory@sushigo.com` with a
+real chosen password instead of silently falling back to the hardcoded default.
+
+**Scope of this exception:** QA only. Demo and Production (#635/#636) are unaffected — they still
+follow TD-07's rule as written; nothing about this change loosens seeding discipline for either of
+those.
+
+### `deploy` and `smoke` merged into one job to actually close the per-suffix race (Codex, 2026-09-20 ×2)
+
+The per-`service_suffix` deploy concurrency group above originally scoped only the `deploy` job.
+Because it released the instant `deploy` finished — before `smoke` (which exercises the just-
+deployed URL) even started — a second dispatch against the *same* suffix could replace the Cloud
+Run service mid-smoke-test, making that smoke run validate the wrong revision or fail
+nondeterministically during the traffic switch. **First fix attempt (superseded):** giving `smoke`
+the identical concurrency group as its own separate job. Codex correctly flagged that this doesn't
+actually close the gap — releasing a group at the end of one job and re-acquiring it at the start
+of another still has a window where a *different* run's waiting job can win the group, since
+[GitHub does not guarantee a run's own next job takes priority over another run's already-queued
+job](https://docs.github.com/en/actions/using-jobs/using-concurrency) — same-group-on-two-jobs is
+not equivalent to holding one continuous lock.
+
+**Actual fix:** `deploy` and `smoke` are now a single job. A single job has no job boundary between
+its steps, so nothing can acquire the concurrency group mid-way through — the lock is provably held
+continuously from the first deploy step through the last smoke-test step, for exactly this run.
+This is the "or combining deploy and smoke" option Codex's own comment named as the alternative to
+workflow-scoped concurrency (which was rejected as a fix here since it would need to span
+`resolve-ref`/`build`/`migrate` too, serializing work that's deliberately independent of a specific
+suffix).
+
+### Smoke script doesn't abort on a transport-level curl failure (Codex finding, 2026-09-20)
+
+`.github/scripts/deploy-smoke-test.sh` runs under `set -e`. The health-check loop already tolerated
+a transport failure (`curl ... || echo "000"`), but the SPA-availability, login, and authenticated
+`GET` calls didn't — a DNS failure, TLS error, or refused connection makes `curl` itself return
+non-zero (distinct from a non-2xx HTTP status, which `curl` treats as success by default), which
+would exit the whole script at that assignment before `record` or the final `$GITHUB_STEP_SUMMARY`
+write ever ran. That turned exactly the network failures this suite exists to catch into a crashed,
+unreported run instead of a clean per-check ❌. Every curl call that feeds a variable now carries
+the same `|| echo "000"` (or, for the two-line login response, `|| printf '\n000'`) fallback.
+
+### Migration lock duration — decision (#634)
+
+TD-07 deliberately left this open: should the migration lock be held through a suffix's *entire*
+manual-validation window (blocking a second suffix's migration mid-test), or should each suffix get
+its own isolated/resettable database instead?
+
+**Decision: the lock is held only for the `migrate` job itself — not through manual validation.**
+Rationale:
+
+- QA/Preview data is explicitly disposable per this doc's own environment table — a second
+  suffix's migration landing mid-test degrades that test, it doesn't corrupt anything that matters
+  long-term.
+- Nothing in this pipeline can signal "a human is done testing" to release a longer-held lock
+  without adding new infrastructure (e.g. a separate "release lock" `workflow_dispatch`, or a lock
+  with an unbounded/human-driven timeout) — holding a CI-managed lock open across an
+  open-ended manual step has no natural end condition today.
+- Per-suffix isolated/resettable databases is the materially larger option — new infrastructure
+  per suffix, not a workflow change — and is better scoped as its own follow-up if the trade-off
+  below actually causes friction in practice, rather than folded into this issue's budget.
+
+**Known trade-off, accepted:** a second, differently-suffixed QA deploy can still run its migration
+against the shared database while an earlier suffix's deployment is still being manually validated,
+silently changing the schema underneath that in-progress test. If this becomes a recurring problem,
+revisit with per-suffix isolated/resettable databases — the concurrency group added here does not
+preclude that later change, it only prevents two migrations from running *simultaneously*.
+
 ## Production and Demo: independent parallel automated pipelines
 
 ```
@@ -283,7 +486,9 @@ the ancestry guard (a human choosing to deploy an old branch to QA is not the ha
 system silently reverting Production would be).
 
 `db:seed --force` must never run automatically against Production, and must not run unattended
-against Demo either — seeding stays an explicitly-invoked step everywhere, QA included.
+against Demo either — seeding stays an explicitly-invoked step for both. **QA is a deliberate,
+documented exception to this rule as of #634's PR review** — see "Seeding" above for why and how;
+Demo and Production are unaffected.
 
 **Migrations in Demo's and Production's automated pipelines must be expand/contract-compatible with
 the currently-running revision** — a destructive migration is not safe to run automatically. The
@@ -330,11 +535,14 @@ have a concrete starting checklist:
       stage built via two separate `docker build --target` invocations, each passing its own
       `VITE_LOGIN_WITH_DEVDEBUG` build-arg, rather than two duplicated stage definitions; same
       per-target build isolation the item requires, see the release-build workflow's own note.)*
-- [ ] Add `--set-secrets`/`--update-secrets`/`--set-env-vars` mappings to every environment's
-      deploy command (DB credentials, `APP_KEY`, `APP_URL`, and the OAuth key pair at the exact
-      `/run/secrets/oauth_{private,public}/value.key` paths `entrypoint.sh` expects) — granting the
-      runtime account `secretmanager.secretAccessor` authorizes access, it does not bind any secret
-      to the revision by itself.
+- [x] Add `--set-secrets`/`--set-env-vars` mappings to QA's deploy command (#634, done for QA;
+      Demo/Production still need their own when #635/#636 land) — DB credentials, `APP_KEY`, and
+      the OAuth key pair at the exact `/run/secrets/oauth_{private,public}/value.key` paths
+      `entrypoint.sh` expects. Discovered while testing #634 for real: without this, a brand-new
+      `service_suffix` boots with no config at all and never starts, and even the existing default
+      service's inherited config had silently drifted to a stale database. Granting the runtime
+      account `secretmanager.secretAccessor` authorizes access, it does not bind any secret to the
+      revision by itself — `--set-secrets` on the deploy call is what actually does the binding.
 - [ ] Provision `sushigo-demo` and `sushigo-prod` GCP projects, their WIF providers, and deploy
       service accounts.
 - [ ] Grant `sushigo-demo`'s and `sushigo-prod`'s **Cloud Run service agent**
@@ -350,8 +558,8 @@ have a concrete starting checklist:
       silently runs as the Compute Engine default account instead. Also grant the **deploy** service
       account `roles/iam.serviceAccountUser` on the **runtime** account (Cloud Run's "actAs"
       requirement), or every deploy fails with a permission error.
-- [ ] Create the `qa` / `demo` / `production` GitHub Environments with environment-scoped
-      secrets/variables (no required reviewers on any of them, per TD-07).
+- [x] Create the `qa` GitHub Environment (#634) — no required reviewers, no branch restriction, per
+      TD-07. `demo`/`production` still open — create those the same way when #635/#636 land.
 - [ ] Point `demo.sushigo-romita.com` and `admin.sushigo-romita.com` at their respective Cloud Run
       services (domain mapping, same mechanism already used for `preview.sushigo-romita.com`).
 - [x] Build the `sushigo-api-prod` and `sushigo-api-preview` build-and-push workflows (triggered on
@@ -365,20 +573,16 @@ have a concrete starting checklist:
 - [ ] Give Demo's and Production's **full chains (migration + deploy)** their own `concurrency`
       group each (queued, not parallel) so two runs against the same environment never execute
       simultaneously — migration step included, not just deploy.
-- [ ] Give QA's new migration step its own database-scoped `concurrency` group, independent of
+- [x] Give QA's new migration step its own database-scoped `concurrency` group, independent of
       `deploy-preview.yml`'s existing per-`service_suffix` group — every QA-suffixed service shares
       one database, so two differently-suffixed dispatches could otherwise race `php artisan
-      migrate` against it even though their deploy steps don't collide.
-- [ ] **Open design question, not resolved by this contract — decide before shipping QA
-      migrations:** a lock scoped to only the migration job (above) is released before that
-      branch's manual testing finishes, so a second suffix's migration can still land on the shared
-      QA database mid-test and silently invalidate what the first branch is being validated
-      against — and because migrations are forward-only, deploying an older branch afterward does
-      not undo it. Two real options, deliberately left to the implementer rather than decided here:
-      hold the lock through deployment *and* manual validation (awkward — nothing currently signals
-      "a human is done testing" to end it), or give each `service_suffix` its own isolated/
-      resettable database (more infrastructure, but the only option that doesn't require a lock
-      spanning human judgment).
+      migrate` against it even though their deploy steps don't collide. *(#634 —
+      `qa-migrate-${{ github.repository }}`, job-level on the new `migrate` job.)*
+- [x] **Open design question, not resolved by this contract — decided by the implementing issue:**
+      a lock scoped to only the migration job (above) is released before that branch's manual
+      testing finishes, so a second suffix's migration can still land on the shared QA database
+      mid-test — see "Migration lock duration — decision (#634)" above for the decision (hold the
+      lock only for the migration step, not through manual validation) and its accepted trade-off.
 - [ ] Add a mandatory ancestry check, covering the same full chain, to both Demo's and Production's
       pipelines — each rejecting a commit that is not a descendant of its own persisted watermark,
       never compared against "whatever is currently serving traffic."
@@ -391,9 +595,18 @@ have a concrete starting checklist:
       expand/contract-safe for a revision still receiving traffic during its health check.
 - [ ] Make Demo's and Production's rollback each quiesce their own entire promotion queue and
       re-verify the ancestry/watermark check immediately before any subsequent traffic shift.
-- [ ] Switch `sushigo-preview`'s Cloud Run ingress to authenticated-only when redesignating it as
-      QA (#634) — it currently deploys with `--allow-unauthenticated`, which contradicts the
-      "Internal / CI only" trust boundary this contract assigns to QA.
+- [ ] Switch `sushigo-preview`'s Cloud Run ingress to authenticated-only — it currently deploys with
+      `--allow-unauthenticated`, which contradicts the "Internal / CI only" trust boundary this
+      contract assigns to QA. **Not part of #634** — that issue's Technical Tasks/Acceptance
+      Criteria scope it strictly to the migration step and smoke validation; ingress hardening
+      remains a separate follow-up.
+- [ ] Provision the actual values in the `qa` GitHub Environment `deploy-preview.yml`'s `migrate`
+      and `smoke` jobs require (#634): secrets `DB_HOST`, `DB_DATABASE`, `DB_USERNAME`,
+      `DB_PASSWORD`, `APP_KEY`, `SMOKE_TEST_PASSWORD`, `SEEDER_ADMIN_PASSWORD`,
+      `SEEDER_EMPLOYEE_PASSWORD`, `SEEDER_INVENTORY_PASSWORD`; vars `SMOKE_TEST_EMAIL` (and
+      optionally `DB_PORT`, defaults to `5432`). The environment itself exists — its secrets/vars
+      do not, yet. The migration step connects directly to QA's Supabase database from the GitHub
+      Actions runner, and the smoke test needs a real QA user to log in as.
 - [ ] Design and build the Demo one-click/global-password login UX (product feature, not
       infrastructure — likely its own Sprint 009 issue), gated to compile only into the `preview`
       target per "Two Docker build targets" above. **Three blockers found while implementing #633
