@@ -462,6 +462,183 @@ lets two overlapping runs race DDL against the same database before either guard
 Demo and Production each keep their **own** watermark and their **own** queue — a stale run or a
 rollback in one can never affect the other.
 
+## Demo — implemented (#635)
+
+Demo's pipeline is `ci.yml` → `deploy-demo` → [`_deploy-demo.yml`](../../../.github/workflows/_deploy-demo.yml),
+plus the operator workflow [`demo-ops.yml`](../../../.github/workflows/demo-ops.yml). It runs only on a
+push to `main`, only after `release-build-preview` succeeded for that commit, and only while the repo
+variable `DEMO_DEPLOY_ENABLED` is `true` (the kill switch that keeps `main` green until the steps in
+"Provisioning" below are done).
+
+### The promotion chain — one job, one lock
+
+`_deploy-demo.yml`'s single `promote` job holds `demo-promotion-${{ github.repository }}`
+(`cancel-in-progress: false`) from the ancestry check to the watermark write. It's one job on purpose,
+for the same reason `deploy-preview.yml` merged `deploy` and `smoke` (see the #634 note above): two jobs
+sharing a group are not one continuous lock. `demo-ops.yml` holds the same group, so a reset, resume or
+watermark change never interleaves with a promotion.
+
+| # | Step | What it guarantees |
+|---|---|---|
+| 1 | Validate configuration | Every `DEMO_*` var and `demo` secret is present. The job refuses if `DEMO_GCP_PROJECT_ID` is QA's `sushigo-app` |
+| 2 | Ancestry / pause gate | Reads `gs://$DEMO_STATE_BUCKET/watermark` and `…/paused`. **Skips** (warning, job stays green) if the queue is paused or the commit doesn't descend from the watermark. This is anti-rollback guard #2 |
+| 3 | Destructive-migration guard | [`check-destructive-migrations.js`](../../../.github/scripts/demo-promotion/check-destructive-migrations.js) scans every migration between the watermark and the candidate. A drop, rename or column redefinition in an `up()` **fails** the run (TD-07: not a candidate). Skipped on the very first promotion (new database, no old revision serving) |
+| 4 | Migrate | `php artisan migrate --force` on the runner, `APP_ENV=demo`, before any replica of the new revision serves. **Never seeds** |
+| 5 | Deploy candidate | `gcloud run deploy --image <repo>@<digest from release-build-preview> --no-traffic --tag candidate --service-account $DEMO_RUNTIME_SERVICE_ACCOUNT`, with every Secret Manager value bound explicitly (see below) |
+| 6 | Health + readiness | `/api/v1/health` (database) then `/api/v1/health/ready` (database, `APP_KEY`, `APP_URL`, OAuth key readability — closes TD-07's "extend the health check" item) on the **candidate tag URL** |
+| 7 | Smoke | `.github/scripts/deploy-smoke-test.sh` against the candidate, signed in as the public demo account (proves the seeded account, `demo-viewer`'s read permissions, `/employees`, `/items` and `/stock`) |
+| 8 | Re-verify gate | Re-reads the pause marker and watermark right before the traffic shift (TD-07) |
+| 9 | Shift traffic | `gcloud run services update-traffic --to-tags candidate=100` |
+| 10 | Advance watermark | Writes the promoted SHA with `--if-generation-match` (compare-and-swap on the generation read in step 8) |
+| — | On any failure after step 2 | Writes `gs://$DEMO_STATE_BUCKET/paused` (run URL and reason) and removes the `candidate` tag. **Every later run skips** until an operator resumes (TD-07: "a failed check must quiesce Demo's promotion queue") |
+
+**Why the watermark lives in GCS, not a git tag or a repo variable:** force-moving a git tag on every
+promotion breaks developers' `git pull` ("would clobber existing tag"). `GITHUB_TOKEN` can't write
+repository variables. A bucket in `sushigo-demo` keeps Demo's state inside Demo's own isolation
+boundary, uses the identity the job already authenticates as, and object generations give a real
+compare-and-swap. The watermark is written only after a successful traffic shift, so it records the
+highest commit ever promoted, independent of whatever is serving (a manual rollback doesn't move it).
+
+**Why a first promotion is special:** Cloud Run can't create a service with `--no-traffic`, so when
+`sushigo-demo` doesn't exist yet, step 5 creates it with traffic. Nothing public points at it until the
+domain mapping is added in the bootstrap below, and steps 6–7 still gate the watermark.
+
+### Application sandbox (`APP_ENV=demo`)
+
+| Control | Where | Behavior |
+|---|---|---|
+| Outbound side effects | `App\Support\Demo\DemoSandbox::apply()` (booted by `AppServiceProvider`) | `mail.default` forced to `log`; `Http::preventStrayRequests()` makes any outbound HTTP call throw. WhatsApp already only logs (#276). The deploy also sets `MAIL_MAILER=log` |
+| Account-mutation routes | `DemoSandboxMiddleware` (api group, no-op outside Demo) | `auth.register`, `auth.forgot-password`, `auth.verify-reset-token`, `auth.reset-password` and `auth.me.avatar` return 403, so visitors can't create accounts or change the shared demo account's password |
+| Rate limiting | same middleware, `config/demo.php` | Per IP: `DEMO_API_RATE_LIMIT` (default 120/min) for the API, `DEMO_AUTH_RATE_LIMIT` (default 10/min) for `auth.login`. `health` / `health.ready` are exempt so deploy probes never false-fail |
+| Least privilege | `Database\Seeders\Demo\DemoRoleSeeder` | `demo-viewer` holds only permissions ending in `.view`/`.index`/`.show`/`.lookup`, plus `reports.today`, `reports.weekly-summary` and `payroll.preview`, with an `AUDITOR` assignment on every operating unit |
+| Visible disclaimer | `GET /api/v1/app-info` → webapp `features/platform/demo-mode` | A banner on every page ("Entorno de demostración … se restablecen periódicamente") showing the public account's **email only**. The endpoint never returns a password |
+| Dev-login / test routes | unchanged | `APP_ENV=demo` is not in `routes/api/dev.php`'s environment list or `SetTestTimeMiddleware`'s, so the `/v1/dev/*`, `/v1/test/*` and `/v1/devtools/*` groups and `X-Test-Time` all stay off. The one-click demo login UX is still the separate deferred item below |
+
+### Data: deterministic seed, explicit reset only
+
+`Database\Seeders\Demo\DemoSeeder` (also `config/seeders.php`'s `demo` entry) builds the canonical dataset:
+branch, operating units and locations, cash setup, the three operator accounts, the public demo account,
+the config-defined employees (`DemoEmployeeSeeder`, with fixed staggered hire dates instead of
+`EmployeeSeeder`'s random ones), wages, dishes, brands, catalog items and variants, suppliers, a posted
+purchase receipt (real `stock` quantities), pricing, leave types, punctuality and overtime rules, and
+holidays. The random attendance, schedule and audit-log seeders are deliberately left out, so two
+same-day resets produce identical data (asserted by `DemoResetCommandTest`). Dates are anchored to the
+reset day so the demo stays current.
+
+`DemoSeeder` **refuses to run under `APP_ENV=demo`** if `SEEDER_ADMIN_PASSWORD`,
+`SEEDER_EMPLOYEE_PASSWORD` or `SEEDER_INVENTORY_PASSWORD` is unset or equal to the repository's hardcoded
+fallback. Demo is public, so an operator account must never have a password readable in this repo.
+The demo account's own password (`SEEDER_DEMO_PASSWORD`) is intentionally shareable.
+
+`php artisan demo:reset` (refuses unless `APP_ENV=demo`) truncates every table except `migrations`, so
+the schema stays at the deployed release, then runs `DemoSeeder`. It is only ever invoked explicitly:
+by `demo-ops.yml`'s `reset` action (manual dispatch, or its nightly 09:00 UTC schedule), never by the
+promotion chain. TD-07's "seeding stays an explicitly-invoked step for Demo" holds. `reset` checks out
+**the watermark commit** so the seeders match the deployed schema.
+
+### Operating Demo (`demo-ops.yml`)
+
+| Action | When |
+|---|---|
+| `status` | Show the watermark, the pause marker and the current traffic split |
+| `reset` | Restore the canonical data. Pass `sha` only to bootstrap a Demo that has never been promoted |
+| `resume` | After investigating a paused queue. Refuses if the watermark isn't an ancestor of `main` |
+| `advance-watermark` | After applying a release with a destructive migration through a planned maintenance procedure. `sha` must descend from the current watermark and be on `main`; the watermark never moves backward |
+
+**Rollback** (TD-07 "Rollback semantics"): **pause first**, then move traffic, so no queued or in-flight
+promotion can shift traffic after you:
+
+```bash
+echo "manual rollback by <you> — <reason>" | gcloud storage cp - "gs://${DEMO_STATE_BUCKET}/paused" --project sushigo-demo
+gcloud run services update-traffic sushigo-demo --to-revisions=<prior-revision>=100 --region <region> --project sushigo-demo
+# investigate/fix on main, then: demo-ops → resume
+```
+
+The watermark is **not** moved back, so the bad commit and anything that doesn't descend from the
+watermark stays rejected.
+
+### Configuration (`demo` GitHub Environment)
+
+Variables are `DEMO_`-prefixed deliberately: repo-level `GCP_PROJECT_ID`/`GCP_PROJECT_NUMBER`/
+`GCP_REGION` already exist for QA, and an unset environment variable would silently fall back to them,
+i.e. deploy "Demo" into QA's project. Secrets reuse #634's names (no repo-level `DB_*`/`APP_KEY`/
+`SEEDER_*` secret exists to fall back to), scoped to `demo`.
+
+| Kind | Name | Value |
+|---|---|---|
+| repo var | `DEMO_DEPLOY_ENABLED` | `true` once provisioning is complete (kill switch for `deploy-demo` and `demo-ops`) |
+| env var | `DEMO_GCP_PROJECT_ID` | `sushigo-demo` |
+| env var | `DEMO_GCP_REGION` | Cloud Run region (e.g. `us-central1`) |
+| env var | `DEMO_CLOUD_RUN_SERVICE` | `sushigo-demo` |
+| env var | `DEMO_WIF_PROVIDER` | `projects/<demo-number>/locations/global/workloadIdentityPools/github-pool/providers/github-provider` |
+| env var | `DEMO_DEPLOY_SERVICE_ACCOUNT` | `gha-sushigo-demo@sushigo-demo.iam.gserviceaccount.com` |
+| env var | `DEMO_RUNTIME_SERVICE_ACCOUNT` | `sushigo-demo-runtime@sushigo-demo.iam.gserviceaccount.com` |
+| env var | `DEMO_STATE_BUCKET` | e.g. `sushigo-demo-promotion-state` |
+| env var | `DEMO_APP_URL` | `https://demo.sushigo-romita.com` |
+| env var | `DEMO_DB_PORT` | optional, default `5432` |
+| env var | `DEMO_ACCOUNT_EMAIL` | optional, default `demo@sushigo.com` (must match the API's `DEMO_ACCOUNT_EMAIL`, if overridden) |
+| env secret | `DB_HOST`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`, `APP_KEY` | Demo's own database and key (the migrate/reset jobs run on the runner). Same "two stores kept in sync" caveat as QA's `PREVIEW_*` note above |
+| env secret | `SEEDER_ADMIN_PASSWORD`, `SEEDER_EMPLOYEE_PASSWORD`, `SEEDER_INVENTORY_PASSWORD` | Real, non-default operator passwords (`DemoSeeder` refuses fallbacks) |
+| env secret | `SEEDER_DEMO_PASSWORD` | The public demo account's password, published next to the demo link. Also used by the smoke test |
+| Secret Manager (`sushigo-demo`) | `DEMO_APP_KEY`, `DEMO_DB_HOST`, `DEMO_DB_DATABASE`, `DEMO_DB_USER`, `DEMO_DB_PASS`, `DEMO_OAUTH_PRIVATE`, `DEMO_OAUTH_PUBLIC` | Bound onto every revision by `--set-secrets`, OAuth pair at `/run/secrets/oauth_{private,public}/value.key` |
+
+### Provisioning (one-time, operator-run; not automatable from this repo)
+
+```bash
+# 1. Project + APIs
+gcloud projects create sushigo-demo
+gcloud services enable run.googleapis.com secretmanager.googleapis.com iamcredentials.googleapis.com \
+  sts.googleapis.com storage.googleapis.com --project sushigo-demo
+DEMO_NUMBER="$(gcloud projects describe sushigo-demo --format='value(projectNumber)')"
+
+# 2. Identities (TD-07's three, none shared with QA/Production)
+gcloud iam service-accounts create gha-sushigo-demo --project sushigo-demo        # deploy (WIF)
+gcloud iam service-accounts create sushigo-demo-runtime --project sushigo-demo    # Cloud Run runtime
+DEPLOY_SA=gha-sushigo-demo@sushigo-demo.iam.gserviceaccount.com
+RUNTIME_SA=sushigo-demo-runtime@sushigo-demo.iam.gserviceaccount.com
+gcloud projects add-iam-policy-binding sushigo-demo --member "serviceAccount:${DEPLOY_SA}" --role roles/run.admin
+gcloud iam service-accounts add-iam-policy-binding "${RUNTIME_SA}" --project sushigo-demo \
+  --member "serviceAccount:${DEPLOY_SA}" --role roles/iam.serviceAccountUser          # "actAs"
+# The Google-managed Cloud Run service agent pulls the image from sushigo-app's registry:
+gcloud artifacts repositories add-iam-policy-binding "${AR_REPO}" --project sushigo-app --location "${AR_LOCATION}" \
+  --member "serviceAccount:service-${DEMO_NUMBER}@serverless-robot-prod.iam.gserviceaccount.com" \
+  --role roles/artifactregistry.reader
+
+# 3. WIF pool/provider trusting this repository only, then let it impersonate the deploy SA
+gcloud iam workload-identity-pools create github-pool --location global --project sushigo-demo
+gcloud iam workload-identity-pools providers create-oidc github-provider --location global \
+  --workload-identity-pool github-pool --project sushigo-demo \
+  --issuer-uri https://token.actions.githubusercontent.com \
+  --attribute-mapping "google.subject=assertion.sub,attribute.repository=assertion.repository" \
+  --attribute-condition "assertion.repository == 'pakodiazdev/sushigo'"
+gcloud iam service-accounts add-iam-policy-binding "${DEPLOY_SA}" --project sushigo-demo \
+  --role roles/iam.workloadIdentityUser \
+  --member "principalSet://iam.googleapis.com/projects/${DEMO_NUMBER}/locations/global/workloadIdentityPools/github-pool/attribute.repository/pakodiazdev/sushigo"
+
+# 4. Secrets: create each DEMO_* secret, then grant ONLY the runtime SA access to them
+for s in DEMO_APP_KEY DEMO_DB_HOST DEMO_DB_DATABASE DEMO_DB_USER DEMO_DB_PASS DEMO_OAUTH_PRIVATE DEMO_OAUTH_PUBLIC; do
+  gcloud secrets create "$s" --project sushigo-demo --replication-policy automatic   # then: versions add
+  gcloud secrets add-iam-policy-binding "$s" --project sushigo-demo \
+    --member "serviceAccount:${RUNTIME_SA}" --role roles/secretmanager.secretAccessor
+done
+
+# 5. Promotion-state bucket, writable only by the deploy SA
+gcloud storage buckets create "gs://${DEMO_STATE_BUCKET}" --project sushigo-demo --uniform-bucket-level-access
+gcloud storage buckets add-iam-policy-binding "gs://${DEMO_STATE_BUCKET}" \
+  --member "serviceAccount:${DEPLOY_SA}" --role roles/storage.objectAdmin
+```
+
+Then: create Demo's own database (a separate Supabase project, the same shape as QA's, never shared),
+create the `demo` GitHub Environment (no required reviewers, TD-07) with the variables and secrets
+above, and set the repo variable `DEMO_DEPLOY_ENABLED=true`.
+
+**Bootstrap order:**
+
+1. The next green `main` creates the service. Its smoke test fails (the database has no demo account yet) and **pauses the queue**. That's expected.
+2. `demo-ops` → `reset` with `sha` = that commit: migrates if needed and seeds the canonical data.
+3. `demo-ops` → `resume`. The next green `main` promotes normally.
+4. Map the domain: `gcloud beta run domain-mappings create --service sushigo-demo --domain demo.sushigo-romita.com --region <region> --project sushigo-demo`, then add the DNS record it prints (the same mechanism as `preview.sushigo-romita.com`). Cloud Run provisions the HTTPS certificate.
+
 ## Migrations
 
 **Cloud Run currently runs no migrations at all, for any environment — this is a gap to close, not
@@ -559,7 +736,8 @@ have a concrete starting checklist:
       account `roles/iam.serviceAccountUser` on the **runtime** account (Cloud Run's "actAs"
       requirement), or every deploy fails with a permission error.
 - [x] Create the `qa` GitHub Environment (#634) — no required reviewers, no branch restriction, per
-      TD-07. `demo`/`production` still open — create those the same way when #635/#636 land.
+      TD-07. `demo`/`production` still open — create those the same way when #635/#636 land
+      (`demo`'s full variable/secret list: "Demo — implemented (#635)" → "Configuration").
 - [ ] Point `demo.sushigo-romita.com` and `admin.sushigo-romita.com` at their respective Cloud Run
       services (domain mapping, same mechanism already used for `preview.sushigo-romita.com`).
 - [x] Build the `sushigo-api-prod` and `sushigo-api-preview` build-and-push workflows (triggered on
@@ -572,7 +750,8 @@ have a concrete starting checklist:
       *(#633 — `_release-build.yml`'s `digest` output; #635/#636 still need to actually consume it.)*
 - [ ] Give Demo's and Production's **full chains (migration + deploy)** their own `concurrency`
       group each (queued, not parallel) so two runs against the same environment never execute
-      simultaneously — migration step included, not just deploy.
+      simultaneously — migration step included, not just deploy. *(Demo done — #635,
+      `demo-promotion-<repo>`, one job for the whole chain; Production still open, #636.)*
 - [x] Give QA's new migration step its own database-scoped `concurrency` group, independent of
       `deploy-preview.yml`'s existing per-`service_suffix` group — every QA-suffixed service shares
       one database, so two differently-suffixed dispatches could otherwise race `php artisan
@@ -585,16 +764,22 @@ have a concrete starting checklist:
       lock only for the migration step, not through manual validation) and its accepted trade-off.
 - [ ] Add a mandatory ancestry check, covering the same full chain, to both Demo's and Production's
       pipelines — each rejecting a commit that is not a descendant of its own persisted watermark,
-      never compared against "whatever is currently serving traffic."
+      never compared against "whatever is currently serving traffic." *(Demo done — #635, GCS
+      watermark; Production still open, #636.)*
 - [ ] Add a post-deploy health check using `/api/v1/health` (not `/api/up`) to Demo's and
-      Production's deploy steps, run against the new revision before it receives traffic.
-- [ ] Extend that check (or add a second one) to cover `APP_KEY`, `APP_URL`, and OAuth key
-      readability — `/api/v1/health` alone only proves database connectivity.
+      Production's deploy steps, run against the new revision before it receives traffic. *(Demo
+      done — #635, candidate tag URL; Production still open, #636.)*
+- [x] Extend that check (or add a second one) to cover `APP_KEY`, `APP_URL`, and OAuth key
+      readability — `/api/v1/health` alone only proves database connectivity. *(#635 —
+      `GET /api/v1/health/ready`; Production can probe the same endpoint.)*
 - [ ] Add a CI check flagging destructive migration operations (dropped/renamed columns) on a PR,
       since Demo/Production promote automatically and a destructive migration is not
-      expand/contract-safe for a revision still receiving traffic during its health check.
+      expand/contract-safe for a revision still receiving traffic during its health check. *(#635
+      added the detector — `.github/scripts/demo-promotion/` — enforced at Demo promotion time; a
+      PR-time warning using the same module is still open.)*
 - [ ] Make Demo's and Production's rollback each quiesce their own entire promotion queue and
       re-verify the ancestry/watermark check immediately before any subsequent traffic shift.
+      *(Demo done — #635, pause marker + re-verify step; Production still open, #636.)*
 - [ ] Switch `sushigo-preview`'s Cloud Run ingress to authenticated-only — it currently deploys with
       `--allow-unauthenticated`, which contradicts the "Internal / CI only" trust boundary this
       contract assigns to QA. **Not part of #634** — that issue's Technical Tasks/Acceptance

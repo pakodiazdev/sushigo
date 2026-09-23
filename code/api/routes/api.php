@@ -17,6 +17,7 @@ if (app()->environment('testing', 'local', 'dev', 'devtest') && file_exists(__DI
 // small (php:S138); each file registers its own routes under this prefix.
 Route::prefix('v1')->group(function () {
     require __DIR__.'/api/health.php';
+    require __DIR__.'/api/system.php';
     require __DIR__.'/api/auth.php';
     require __DIR__.'/api/units-of-measure.php';
     require __DIR__.'/api/items.php';

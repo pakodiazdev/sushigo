@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\DemoSandboxMiddleware;
 use App\Http\Middleware\SetTestTimeMiddleware;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -17,6 +18,11 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->api(prepend: [
             SetTestTimeMiddleware::class,
             \Illuminate\Http\Middleware\HandleCors::class,
+        ]);
+
+        // Public Demo abuse controls (#635) — no-op unless APP_ENV=demo.
+        $middleware->api(append: [
+            DemoSandboxMiddleware::class,
         ]);
 
         // Trust all proxies (nginx reverse proxy)

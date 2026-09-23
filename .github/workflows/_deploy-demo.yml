@@ -1,0 +1,327 @@
+name: _deploy-demo
+
+# Automated promotion of the public Demo environment (#635, per TD-07 — doc/decisions/td-07-
+# environment-release-promotion-contract.md; operational reference: doc/conventions/ci/deployment.md
+# → "Demo"). Called by ci.yml's `deploy-demo` job only after `release-build-preview` published the
+# `preview`-target image for a green `main` commit. It consumes that build's digest verbatim — it
+# never rebuilds the image and never re-resolves the tag.
+#
+# Independent lineage: Demo has its own GCP project (`sushigo-demo`), Cloud Run service, database,
+# secrets, concurrency group and watermark. Nothing here reads or depends on QA (#634) or Production
+# (#636).
+#
+# Everything from the ancestry gate to the watermark update is ONE job on purpose: a concurrency
+# group held by a single job cannot be taken over between steps (see deployment.md's #634 note on
+# why two jobs sharing a group is not one continuous lock), so migration, deploy, checks, traffic
+# shift and watermark update form one uninterruptible chain per Demo promotion.
+#
+# Configuration lives in the `demo` GitHub Environment. Variables are DEMO_-prefixed on purpose:
+# repo-level `GCP_PROJECT_ID` / `GCP_PROJECT_NUMBER` / `GCP_REGION` already exist for QA, and an
+# environment variable left unset would otherwise silently fall back to QA's project.
+
+on:
+  workflow_call:
+    inputs:
+      sha:
+        description: "The green main commit being promoted"
+        required: true
+        type: string
+      image_uri:
+        description: "Tagged image URI from _release-build.yml (release-<sha>), used only to derive the repository path"
+        required: true
+        type: string
+      digest:
+        description: "Immutable digest (sha256:...) from _release-build.yml — the only image reference deployed"
+        required: true
+        type: string
+
+jobs:
+  promote:
+    name: promote (demo)
+    runs-on: ubuntu-latest
+    environment: demo
+    # Shared with demo-ops.yml (reset / resume / advance-watermark) so an operator action can never
+    # interleave with a promotion. Queued, never cancelled.
+    concurrency:
+      group: demo-promotion-${{ github.repository }}
+      cancel-in-progress: false
+    permissions:
+      id-token: write
+      contents: read
+    env:
+      SHA: ${{ inputs.sha }}
+      IMAGE_REF: ${{ inputs.digest }}
+      IMAGE_URI: ${{ inputs.image_uri }}
+      GCP_PROJECT: ${{ vars.DEMO_GCP_PROJECT_ID }}
+      GCP_REGION: ${{ vars.DEMO_GCP_REGION }}
+      SERVICE: ${{ vars.DEMO_CLOUD_RUN_SERVICE }}
+      RUNTIME_SA: ${{ vars.DEMO_RUNTIME_SERVICE_ACCOUNT }}
+      STATE_BUCKET: ${{ vars.DEMO_STATE_BUCKET }}
+      DEMO_APP_URL: ${{ vars.DEMO_APP_URL }}
+      DB_PORT: ${{ vars.DEMO_DB_PORT || '5432' }}
+    steps:
+      - name: Validate Demo configuration
+        env:
+          WIF_PROVIDER: ${{ vars.DEMO_WIF_PROVIDER }}
+          DEPLOY_SA: ${{ vars.DEMO_DEPLOY_SERVICE_ACCOUNT }}
+          HAS_DB_HOST: ${{ secrets.DB_HOST != '' }}
+          HAS_DB_DATABASE: ${{ secrets.DB_DATABASE != '' }}
+          HAS_DB_USERNAME: ${{ secrets.DB_USERNAME != '' }}
+          HAS_DB_PASSWORD: ${{ secrets.DB_PASSWORD != '' }}
+          HAS_APP_KEY: ${{ secrets.APP_KEY != '' }}
+          HAS_DEMO_PASSWORD: ${{ secrets.SEEDER_DEMO_PASSWORD != '' }}
+        run: |
+          set -euo pipefail
+          missing=()
+          for v in GCP_PROJECT GCP_REGION SERVICE RUNTIME_SA STATE_BUCKET DEMO_APP_URL WIF_PROVIDER DEPLOY_SA; do
+            [ -n "${!v}" ] || missing+=("$v")
+          done
+          for s in DB_HOST DB_DATABASE DB_USERNAME DB_PASSWORD APP_KEY DEMO_PASSWORD; do
+            flag="HAS_${s}"
+            [ "${!flag}" = "true" ] || missing+=("secret:${s}")
+          done
+          if [ "${#missing[@]}" -gt 0 ]; then
+            echo "::error::Demo is not fully configured in the 'demo' GitHub Environment — missing: ${missing[*]} (see doc/conventions/ci/deployment.md → Demo → Provisioning)"
+            exit 1
+          fi
+          case "$IMAGE_REF" in sha256:*) ;; *) echo "::error::digest input must be sha256:..., got '${IMAGE_REF}'"; exit 1 ;; esac
+          if [ "$GCP_PROJECT" = "sushigo-app" ]; then
+            echo "::error::DEMO_GCP_PROJECT_ID points at QA's project — Demo must deploy to its own project (TD-07)"
+            exit 1
+          fi
+
+      - name: Checkout the promoted commit (full history for the ancestry check)
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.sha }}
+          fetch-depth: 0
+
+      - name: Auth to Google Cloud (Demo deploy identity, WIF)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.DEMO_WIF_PROVIDER }}
+          service_account: ${{ vars.DEMO_DEPLOY_SERVICE_ACCOUNT }}
+
+      - name: Setup gcloud
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ vars.DEMO_GCP_PROJECT_ID }}
+
+      # Anti-rollback guard #2 (TD-07): the candidate must descend from Demo's own persisted
+      # watermark — the highest commit ever promoted to Demo — never "whatever is serving now". A
+      # paused queue (a previous run's failed checks, or an operator's rollback) blocks everything
+      # until an operator resumes it via demo-ops.yml.
+      - name: Ancestry / pause gate
+        id: gate
+        run: |
+          set -euo pipefail
+          proceed=true
+          reason=""
+          WATERMARK=""
+          if gcloud storage objects describe "gs://${STATE_BUCKET}/paused" >/dev/null 2>&1; then
+            proceed=false
+            reason="Demo promotion queue is paused: $(gcloud storage cat "gs://${STATE_BUCKET}/paused" | head -1)"
+          fi
+          if gcloud storage objects describe "gs://${STATE_BUCKET}/watermark" >/dev/null 2>&1; then
+            WATERMARK="$(gcloud storage cat "gs://${STATE_BUCKET}/watermark" | tr -d '[:space:]')"
+          fi
+          if [ "$proceed" = "true" ] && [ -n "$WATERMARK" ]; then
+            git cat-file -e "${WATERMARK}^{commit}" 2>/dev/null || { echo "::error::Watermark ${WATERMARK} is not a commit in this repository"; exit 1; }
+            if ! git merge-base --is-ancestor "$WATERMARK" "$SHA"; then
+              proceed=false
+              reason="${SHA} does not descend from Demo's watermark ${WATERMARK} — stale run, refusing to roll Demo back"
+            fi
+          fi
+          {
+            echo "proceed=${proceed}"
+            echo "watermark=${WATERMARK}"
+          } >> "$GITHUB_OUTPUT"
+          if [ "$proceed" = "false" ]; then
+            echo "::warning::Skipping Demo promotion — ${reason}"
+            echo "reason=${reason}" >> "$GITHUB_OUTPUT"
+          else
+            echo "✅ ${SHA} descends from watermark '${WATERMARK:-<none — first promotion>}'"
+          fi
+
+      - name: Setup Node 24
+        if: steps.gate.outputs.proceed == 'true' && steps.gate.outputs.watermark != ''
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      # TD-07: a release containing a destructive (non expand/contract) migration is not a candidate
+      # for automated promotion. Scans exactly the migrations this promotion would run. Skipped on
+      # the very first promotion (no watermark): the database is new and no old revision is serving.
+      - name: Destructive-migration guard
+        if: steps.gate.outputs.proceed == 'true' && steps.gate.outputs.watermark != ''
+        run: node .github/scripts/demo-promotion/check-destructive-migrations.js "${{ steps.gate.outputs.watermark }}" "$SHA"
+
+      - name: Setup PHP 8.5
+        if: steps.gate.outputs.proceed == 'true'
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          coverage: none
+
+      - name: Install Composer dependencies
+        if: steps.gate.outputs.proceed == 'true'
+        working-directory: code/api
+        run: |
+          composer install --prefer-dist --no-interaction --no-progress --no-scripts --no-dev
+          cp .env.example .env
+
+      # One-shot, forward-only migration, run once per release before any replica of the new
+      # revision serves traffic (TD-07 "Migration ownership"). Never seeds — Demo data is only ever
+      # (re)created explicitly, by demo-ops.yml's reset.
+      - name: Migrate Demo database
+        id: migrate
+        if: steps.gate.outputs.proceed == 'true'
+        working-directory: code/api
+        env:
+          APP_ENV: demo
+          APP_KEY: ${{ secrets.APP_KEY }}
+          APP_URL: ${{ vars.DEMO_APP_URL }}
+          DB_CONNECTION: pgsql
+          DB_HOST: ${{ secrets.DB_HOST }}
+          DB_DATABASE: ${{ secrets.DB_DATABASE }}
+          DB_USERNAME: ${{ secrets.DB_USERNAME }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+        run: php artisan migrate --force
+
+      # --no-traffic + --tag candidate: the new revision gets its own URL and zero traffic until every
+      # check below passes. A brand-new service can't be created with --no-traffic, so the very first
+      # promotion creates it directly (nothing public points at it yet — the domain mapping is added
+      # after bootstrap, see deployment.md).
+      - name: Deploy candidate revision (no traffic)
+        id: deploy
+        if: steps.gate.outputs.proceed == 'true'
+        run: |
+          set -euo pipefail
+          IMAGE="${IMAGE_URI%:*}@${IMAGE_REF}"
+          echo "image=${IMAGE}" >> "$GITHUB_OUTPUT"
+          TRAFFIC_FLAG="--no-traffic"
+          if ! gcloud run services describe "$SERVICE" --region "$GCP_REGION" >/dev/null 2>&1; then
+            echo "::notice::Service ${SERVICE} does not exist yet — first promotion creates it"
+            TRAFFIC_FLAG=""
+          fi
+          # shellcheck disable=SC2086
+          gcloud run deploy "$SERVICE" \
+            --image "$IMAGE" \
+            --region "$GCP_REGION" \
+            --platform managed \
+            --allow-unauthenticated \
+            --service-account "$RUNTIME_SA" \
+            --update-env-vars "APP_ENV=demo,APP_DEBUG=false,APP_URL=${DEMO_APP_URL},DB_CONNECTION=pgsql,DB_PORT=${DB_PORT},MAIL_MAILER=log" \
+            --set-secrets "APP_KEY=DEMO_APP_KEY:latest,DB_HOST=DEMO_DB_HOST:latest,DB_DATABASE=DEMO_DB_DATABASE:latest,DB_USERNAME=DEMO_DB_USER:latest,DB_PASSWORD=DEMO_DB_PASS:latest,/run/secrets/oauth_private/value.key=DEMO_OAUTH_PRIVATE:latest,/run/secrets/oauth_public/value.key=DEMO_OAUTH_PUBLIC:latest" \
+            --tag candidate \
+            $TRAFFIC_FLAG \
+            --quiet
+          CANDIDATE_URL="$(gcloud run services describe "$SERVICE" --region "$GCP_REGION" --format=json \
+            | jq -r '.status.traffic[] | select(.tag == "candidate") | .url' | head -1)"
+          REVISION="$(gcloud run services describe "$SERVICE" --region "$GCP_REGION" --format='value(status.latestCreatedRevisionName)')"
+          [ -n "$CANDIDATE_URL" ] || { echo "::error::Could not resolve the candidate tag URL"; exit 1; }
+          echo "candidate_url=${CANDIDATE_URL}" >> "$GITHUB_OUTPUT"
+          echo "revision=${REVISION}" >> "$GITHUB_OUTPUT"
+
+      # /api/v1/health proves only the database; /api/v1/health/ready adds APP_KEY, APP_URL and OAuth
+      # key readability (TD-07 "Post-deploy health check").
+      - name: Health + readiness check on the candidate
+        if: steps.gate.outputs.proceed == 'true'
+        env:
+          URL: ${{ steps.deploy.outputs.candidate_url }}
+        run: |
+          set -euo pipefail
+          for path in /api/v1/health /api/v1/health/ready; do
+            ok=false
+            for i in $(seq 1 30); do
+              code="$(curl -s --max-time 10 -o /tmp/probe.json -w '%{http_code}' "${URL}${path}" || echo "000")"
+              if [ "$code" = "200" ]; then ok=true; echo "✅ ${path} passed (attempt ${i})"; break; fi
+              echo "  ${path} attempt ${i}: HTTP ${code}"
+              sleep 5
+            done
+            if [ "$ok" != "true" ]; then
+              echo "::error::${path} did not pass on the candidate revision"
+              cat /tmp/probe.json 2>/dev/null || true
+              exit 1
+            fi
+          done
+
+      - name: Smoke test the candidate (demo account)
+        if: steps.gate.outputs.proceed == 'true'
+        env:
+          BASE_URL: ${{ steps.deploy.outputs.candidate_url }}
+          SMOKE_TEST_EMAIL: ${{ vars.DEMO_ACCOUNT_EMAIL || 'demo@sushigo.com' }}
+          SMOKE_TEST_PASSWORD: ${{ secrets.SEEDER_DEMO_PASSWORD }}
+        run: bash .github/scripts/deploy-smoke-test.sh
+
+      # TD-07: re-verify the watermark and the pause marker immediately before shifting traffic — an
+      # operator may have rolled Demo back (and paused the queue) while this run was deploying.
+      - name: Re-verify gate before traffic shift
+        id: reverify
+        if: steps.gate.outputs.proceed == 'true'
+        run: |
+          set -euo pipefail
+          if gcloud storage objects describe "gs://${STATE_BUCKET}/paused" >/dev/null 2>&1; then
+            echo "::error::Demo promotion queue was paused while this run was in flight — not shifting traffic"
+            exit 1
+          fi
+          CURRENT=""
+          GENERATION=0
+          if gcloud storage objects describe "gs://${STATE_BUCKET}/watermark" >/dev/null 2>&1; then
+            CURRENT="$(gcloud storage cat "gs://${STATE_BUCKET}/watermark" | tr -d '[:space:]')"
+            GENERATION="$(gcloud storage objects describe "gs://${STATE_BUCKET}/watermark" --format='value(generation)')"
+          fi
+          if [ -n "$CURRENT" ] && ! git merge-base --is-ancestor "$CURRENT" "$SHA"; then
+            echo "::error::Watermark is now ${CURRENT}, which ${SHA} does not descend from — not shifting traffic"
+            exit 1
+          fi
+          echo "generation=${GENERATION}" >> "$GITHUB_OUTPUT"
+
+      - name: Shift traffic to the candidate
+        id: traffic
+        if: steps.gate.outputs.proceed == 'true'
+        run: gcloud run services update-traffic "$SERVICE" --region "$GCP_REGION" --to-tags candidate=100 --quiet
+
+      # Compare-and-swap on the object generation just re-verified: a concurrent writer (which the
+      # concurrency group should already exclude) makes this fail instead of silently regressing.
+      - name: Advance Demo watermark
+        if: steps.gate.outputs.proceed == 'true'
+        run: |
+          set -euo pipefail
+          echo "$SHA" > /tmp/watermark
+          gcloud storage cp /tmp/watermark "gs://${STATE_BUCKET}/watermark" \
+            --if-generation-match="${{ steps.reverify.outputs.generation }}"
+
+      # TD-07: a failed check quiesces Demo's whole promotion queue. The candidate never received
+      # traffic (unless this was the service's very first creation), so nothing needs rolling back —
+      # but every later run skips until an operator investigates and resumes via demo-ops.yml.
+      - name: Pause Demo promotion queue on failure
+        if: failure() && steps.gate.outputs.proceed == 'true'
+        run: |
+          set -euo pipefail
+          printf '%s\n' "Run ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID} failed promoting ${SHA} at $(date -u +%FT%TZ)" > /tmp/paused
+          gcloud storage cp /tmp/paused "gs://${STATE_BUCKET}/paused" || echo "::error::Could not write the pause marker — pause Demo manually (demo-ops.yml is the runbook)"
+          if [ "${{ steps.traffic.outcome }}" != "success" ]; then
+            gcloud run services update-traffic "$SERVICE" --region "$GCP_REGION" --remove-tags candidate --quiet || true
+          fi
+
+      - name: Demo promotion summary
+        if: always()
+        run: |
+          {
+            echo "### 🎭 Demo promotion — \`${SHA}\`"
+            echo ""
+            if [ "${{ steps.gate.outputs.proceed }}" != "true" ]; then
+              echo "- ⏭️ Skipped: ${{ steps.gate.outputs.reason }}"
+            else
+              echo "- **Previous watermark**: \`${{ steps.gate.outputs.watermark || 'none' }}\`"
+              echo "- **Image**: \`${{ steps.deploy.outputs.image }}\`"
+              echo "- **Revision**: \`${{ steps.deploy.outputs.revision }}\`"
+              echo "- **Candidate URL**: ${{ steps.deploy.outputs.candidate_url }}"
+              if [ "${{ job.status }}" = "success" ]; then
+                echo "- ✅ Migrated, health/readiness/smoke passed, traffic shifted, watermark advanced"
+              else
+                echo "- ❌ Promotion failed — Demo's promotion queue is now **paused**; resume with the \`demo-ops\` workflow after investigating"
+              fi
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"

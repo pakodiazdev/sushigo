@@ -245,6 +245,7 @@ jobs:
           node --test .github/scripts/ci-analyze/tests/*.test.js
           node --test .github/scripts/sprint-audit/tests/*.test.js
           node --test .github/scripts/ci-badges/tests/*.test.js
+          node --test .github/scripts/demo-promotion/tests/*.test.js
 
   e2e-ci:
     name: e2e-ci
@@ -446,4 +447,26 @@ jobs:
       target: prod-cloudrun
       image_name: ${{ vars.IMAGE_NAME_PROD }}
       login_with_devdebug: "false"
+    secrets: inherit
+
+  # Promotes the digest release-build-preview just published to the public Demo (#635, per TD-07):
+  # its own GCP project, concurrency group and watermark — independent of QA (#634) and Production
+  # (#636). Consumes the build's digest output as-is; never rebuilds. Gated by the repo variable
+  # DEMO_DEPLOY_ENABLED so main stays green until the `sushigo-demo` project and the `demo` GitHub
+  # Environment are provisioned (doc/conventions/ci/deployment.md → Demo → Provisioning).
+  deploy-demo:
+    name: deploy-demo
+    needs: release-build-preview
+    if: >-
+      github.event_name == 'push' && github.ref == 'refs/heads/main' &&
+      needs.release-build-preview.result == 'success' &&
+      vars.DEMO_DEPLOY_ENABLED == 'true'
+    permissions:
+      id-token: write
+      contents: read
+    uses: ./.github/workflows/_deploy-demo.yml
+    with:
+      sha: ${{ github.sha }}
+      image_uri: ${{ needs.release-build-preview.outputs.image_uri }}
+      digest: ${{ needs.release-build-preview.outputs.digest }}
     secrets: inherit

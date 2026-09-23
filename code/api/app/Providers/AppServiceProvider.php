@@ -7,6 +7,7 @@ use App\Services\Testing\FileTokenRecorder;
 use App\Services\Testing\NullTokenRecorder;
 use App\Support\Clock\ApplicationClock;
 use App\Support\Clock\DatabaseApplicationClock;
+use App\Support\Demo\DemoSandbox;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -38,6 +39,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        // Public Demo (#635): neutralize outbound side effects in code, not
+        // only through per-deploy MAIL_* configuration.
+        if (DemoSandbox::isActive()) {
+            DemoSandbox::apply();
+        }
     }
 }
