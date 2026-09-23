@@ -16,6 +16,8 @@ set -euo pipefail
 # Optional env vars:
 #   HEALTH_CHECK_RETRIES  attempts for the health check's retry loop (default 30)
 #   HEALTH_CHECK_DELAY    seconds between health check attempts (default 5)
+#   HEALTH_PATH           API path of the health probe (default /health). Production (#636) passes
+#                         /health/ready so the smoke run also covers APP_KEY/APP_URL/OAuth keys.
 #
 # Exits non-zero if any check fails. Appends a Markdown summary to $GITHUB_STEP_SUMMARY when set.
 #
@@ -37,6 +39,7 @@ set -euo pipefail
 HEALTH_CHECK_RETRIES="${HEALTH_CHECK_RETRIES:-30}"
 HEALTH_CHECK_DELAY="${HEALTH_CHECK_DELAY:-5}"
 CURL_MAX_TIME="${CURL_MAX_TIME:-10}"
+HEALTH_PATH="${HEALTH_PATH:-/health}"
 
 BASE_URL="${BASE_URL%/}"
 API_URL="${BASE_URL}/api/v1"
@@ -57,10 +60,10 @@ record() {
 echo "== Deployment smoke test against ${BASE_URL} =="
 
 # 1. API health — retried, since the revision may still be starting up right after deploy.
-echo "-- API health (${API_URL}/health) --"
+echo "-- API health (${API_URL}${HEALTH_PATH}) --"
 health_ok=""
 for attempt in $(seq 1 "$HEALTH_CHECK_RETRIES"); do
-  code="$(curl -s --max-time "${CURL_MAX_TIME}" -o /tmp/smoke-health.json -w '%{http_code}' "${API_URL}/health" || echo "000")"
+  code="$(curl -s --max-time "${CURL_MAX_TIME}" -o /tmp/smoke-health.json -w '%{http_code}' "${API_URL}${HEALTH_PATH}" || echo "000")"
   if [ "$code" = "200" ]; then
     echo "  attempt ${attempt}: HTTP ${code} — healthy"
     health_ok="yes"

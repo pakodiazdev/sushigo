@@ -17,6 +17,14 @@ Este documento describe la infraestructura de despliegue, la estrategia de ramas
 > check y rollback que TD-07 agrega sobre la descripción básica del disparador de abajo.
 > `doc/conventions/ci/deployment.md` es la referencia operativa vigente; las secciones de abajo
 > (§2, §4–§7) no se han reconciliado con él más allá de esta nota.
+>
+> **Producción está implementada desde #636** mediante `.github/workflows/deploy-production.yml`
+> (automático con `main` en verde, gate de aprobación durante la adopción inicial, migración única
+> vía Cloud Run Job, revisión candidata `--no-traffic` validada con `/api/v1/health/ready` + smoke
+> test, guardas anti-rollback de watermark/quiesce) y `production-rollback.yml`. El diagrama de §6.2
+> es anterior: Producción **no** reconstruye la imagen al desplegar — despliega el digest
+> `prod-cloudrun` que `_release-build.yml` ya publicó — y su base de datos es propia, nunca
+> compartida con QA/Preview. Ver deployment.md → "Production pipeline".
 
 ---
 

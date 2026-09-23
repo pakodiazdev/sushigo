@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\V1\Health\ReadinessController;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 
@@ -25,3 +26,6 @@ Route::get('health', function () {
         ],
     ], $dbStatus === 'ok' ? 200 : 503);
 })->name('health');
+
+// Readiness gate for Production's candidate revision (#636) — see ReadinessController.
+Route::get('health/ready', ReadinessController::class)->name('health.ready');
