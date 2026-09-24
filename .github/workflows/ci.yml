@@ -6,6 +6,7 @@ name: CI
 #                ├─ webapp-ci     (reusable _webapp-ci.yml: lint+typecheck → vitest → [coverage → sonar])
 #                ├─ e2e-ci        (reusable _e2e-ci.yml:    boot stack → cypress, selection = pr-specs | full)
 #                ├─ scripts-tests (node --test for .github/scripts/*)
+#                ├─ migration-guard (PR-only, warn-only destructive-migration annotations — not gated)
 #                └─ ci-gate       (the ONLY required check — its name never changes with shard counts)
 #
 # Merge-blocking is GitHub DRAFT status (#598): the issue slash-commands open the PR with
@@ -245,6 +246,40 @@ jobs:
           node --test .github/scripts/ci-analyze/tests/*.test.js
           node --test .github/scripts/sprint-audit/tests/*.test.js
           node --test .github/scripts/ci-badges/tests/*.test.js
+          node --test .github/scripts/migration-guard/tests/*.test.js
+          node --test .github/scripts/production-release/tests/*.test.js
+
+  # Destructive-migration guard, WARN mode (#636, TD-07 "Migration ownership"). Production's
+  # automated pipeline runs the same scanner in BLOCK mode before migrating and refuses a release
+  # whose migrations drop/rename/retype anything unacknowledged — this job surfaces the same
+  # findings as PR annotations at review time, so nobody discovers them only when a Production
+  # promotion stops. Deliberately NOT in ci-gate's needs and never fails: a destructive migration
+  # can be legitimate (contract phase), it just must be acknowledged in the migration file with
+  # `// migration-guard: allow <reason>` before Production will run it unattended.
+  migration-guard:
+    name: migration-guard
+    needs: analyze-pr
+    if: >-
+      github.event_name == 'pull_request' &&
+      needs.analyze-pr.outputs.run_lint == 'true' &&
+      needs.analyze-pr.outputs.api_changed == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (full history, for the base...head diff)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Scan changed migrations (warn only)
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: node .github/scripts/migration-guard/cli.js --mode=warn --base="$BASE_SHA" --head="$HEAD_SHA"
 
   e2e-ci:
     name: e2e-ci

@@ -204,6 +204,17 @@ secrets are stronger than repo-level vars with a naming suffix), not merge/deplo
 also promotes automatically, for the same reason: the compensating control for both is the fast
 Cloud Run revision rollback below, not a pre-deploy human gate.
 
+**Correction (2026-09-23, #636):** for the *initial adoption period only*, the project owner asked
+for a GitHub Environment approval gate before Production promotion after all — Production is about
+to start holding real employee/product data, and #636's Acceptance Criteria require "explicit
+approval during the initial adoption period, with all subsequent steps automated." #636 therefore
+puts `environment: production` (with required reviewers configured on the Environment) on the
+single job that migrates, deploys, verifies and promotes, so one approval unlocks the whole
+automated chain and nothing touches the Production database before it. The trigger itself stays
+automatic on green `main`. Removing the gate later needs no pipeline change — delete the required
+reviewers from the `production` Environment, exactly as "Alternatives considered" anticipated. Demo
+is unaffected.
+
 ### Secrets and variables: never shared across environments
 
 Per project, at minimum: `DB_HOST`/`DB_DATABASE`/`DB_USERNAME`/`DB_PASSWORD`, `APP_KEY`,

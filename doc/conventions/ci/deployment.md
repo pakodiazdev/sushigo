@@ -23,7 +23,7 @@ workflows, not part of the PR validation DAG.
 | **Docker target** | `preview` (convenience) | `preview` (convenience) | `prod-cloudrun` (hardened, new — see below) |
 | Trust boundary | Internal / CI only | Public, unauthenticated | Public, real users |
 | Data policy | Non-production, disposable, reset freely | Synthetic, reset on a schedule | Real, persistent, backed up |
-| Manual approval to deploy | N/A (already manual) | No | No (see TD-07 "Alternatives considered") |
+| Manual approval to deploy | N/A (already manual) | No | Yes, during initial adoption only — required reviewers on the `production` Environment (#636, see TD-07's correction note) |
 
 QA is **not** part of the automated pipeline below — it is the existing `deploy-preview.yml` model
 (a human picks a branch, triggers a build+deploy, tests it) kept as-is, used for pre-merge
@@ -432,6 +432,15 @@ implementing issue must extend the health check (or add a second candidate-revis
 cover those settings; `/api/v1/health` alone catches a bad database credential, not every
 environment-specific misconfiguration.
 
+**Implemented (#636):** `GET /api/v1/health/ready` (`ReadinessController` +
+`App\Services\Health\ReadinessChecker`) checks the database connection, that `APP_KEY` decodes to
+a key valid for `app.cipher`, that `APP_URL` is an absolute http(s) URL, and that both Passport OAuth
+keys (inline `PASSPORT_*_KEY` config or the `storage/oauth-*.key` files, mirroring Passport's own
+lookup) parse as valid keys. It returns 200 only when every check passes, 503 otherwise, and reports
+only `ok`/`error` per check — never a value or exception message, since it is public.
+`/api/v1/health` is deliberately unchanged: the compose and E2E healthchecks poll it, and an
+environment without OAuth keys (e.g. a fresh local stack) must still count as "alive" there.
+
 ### Anti-rollback guards — mandatory, per environment's own lineage
 
 Two `main` commits landing close together can trigger overlapping pipeline runs for the *same*
@@ -461,6 +470,155 @@ lets two overlapping runs race DDL against the same database before either guard
 
 Demo and Production each keep their **own** watermark and their **own** queue — a stale run or a
 rollback in one can never affect the other.
+
+## Production pipeline (#636)
+
+Implemented by [`.github/workflows/deploy-production.yml`](../../../.github/workflows/deploy-production.yml)
+(automatic releases) and [`production-rollback.yml`](../../../.github/workflows/production-rollback.yml)
+(manual rollback / resume). Independent of QA and Demo: nothing here reads or waits on
+`deploy-preview.yml` or #635's Demo pipeline.
+
+### Flow
+
+```
+CI (push to main) ─ ci-gate ✅ ─ release-build-prod-cloudrun ─ uploads release-prod-cloudrun (release.json)
+        │
+        └─(workflow_run: completed, success)─▶ deploy-production.yml
+             preflight   resolve CI run → commit · validate manifest (prod-cloudrun, same commit, sha256 digest)
+                         · promotion guard · destructive-migration guard (block)
+             release     ⏸ environment `production` approval (initial adoption)
+                         guard re-check → migrate (Cloud Run Job, same digest) → deploy --no-traffic --tag candidate
+                         → /api/v1/health/ready on candidate URL → smoke test on candidate URL
+                         → guard re-check → update-traffic <revision>=100 → post-promotion readiness
+                         → tag replaced revision `previous` → advance watermark
+                         on failure (after migration started): restore previous traffic + quiesce
+```
+
+- **Release identity.** `_release-build.yml` now also uploads a `release-<target>` artifact
+  (`release.json`: target, commit, image_uri, digest). deploy-production.yml downloads the one from
+  the *triggering* CI run and deploys `<repository>@sha256:<digest>` — it never rebuilds, never
+  re-resolves the mutable `release-<sha>` tag, and `manifest.js` rejects anything that isn't the
+  `prod-cloudrun` target for exactly that commit (no fallback to `preview`).
+- **Trigger.** `workflow_run` of `CI` on `main`, only when that run concluded `success` for a `push`
+  from this repository. `workflow_dispatch` (`ci_run_id`) re-attempts a specific green CI run; the run
+  is re-validated through the API either way.
+- **Kill switch.** Nothing runs unless the repository variable `PRODUCTION_DEPLOY_ENABLED` is `true`,
+  so merging the workflow before `sushigo-prod` exists is harmless.
+- **Approval gate (initial adoption).** Only the `release` job declares `environment: production`,
+  and it contains every Production-changing step, so one approval unlocks the whole automated chain
+  and nothing touches the database before it. To go zero-click later, remove the Environment's
+  required reviewers — no workflow change (TD-07's correction note).
+- **Configuration.** Project `sushigo-prod`, service `sushigo-prod`, jobs `sushigo-prod-migrate` /
+  `sushigo-prod-seed`, deploy SA `gha-sushigo-prod@…`, runtime SA `sushigo-prod-runtime@…`, domain
+  and Secret Manager names `PROD_*` are hardcoded (fixed by TD-07), so a missing Production variable
+  can never fall back to the repo-level `GCP_PROJECT_ID`/`GCP_PROJECT_NUMBER` that point at QA's
+  `sushigo-app`. Repository vars: `PRODUCTION_DEPLOY_ENABLED`, `PROD_GCP_PROJECT_NUMBER`,
+  `PROD_GCP_REGION`, optional `PROD_DB_PORT`. `production` Environment: required reviewers, var
+  `SMOKE_TEST_EMAIL`, secret `SMOKE_TEST_PASSWORD`. Runtime env vars (`APP_ENV=production`,
+  `APP_DEBUG=false`, `APP_URL`, `DB_CONNECTION`, `DB_PORT`) are applied with `--update-env-vars`, and
+  secrets (DB credentials, `APP_KEY`, the OAuth pair at `/run/secrets/oauth_{private,public}/value.key`)
+  with `--update-secrets` on every deploy, as the dedicated runtime SA.
+
+### Promotion guard: watermark and quiesce tags
+
+TD-07's persisted per-environment state lives in two annotated tags on this repository, read from
+the remote on every check (`.github/scripts/production-release/guard.js`) and written through the
+GitHub API with the job's own token (`tag.sh`, `contents: write`):
+
+| Tag | Meaning | Moved by |
+|---|---|---|
+| `deploy/production/watermark` | Highest commit ever promoted to Production | `release`, only after a successful traffic shift — never backward |
+| `deploy/production/quiesced` | Promotion queue suspended | `release` on a failure after migration started; `production-rollback.yml` (rollback). Removed only by `production-rollback.yml` (resume) |
+
+A candidate passes only if the queue is not quiesced, it is reachable from `main`, and it is a
+**strict** descendant of the watermark (no watermark yet = bootstrap). "Strict" is what keeps a
+rolled-back commit rejected forever: after rolling back from C to B, the watermark is still C, so C
+can never be re-promoted, while its descendant D can. The guard runs in preflight, again after the
+approval wait (which can take hours), and immediately before the traffic shift. The workflow-level
+`production-release-<repo>` concurrency group (`cancel-in-progress: false`) serializes the whole
+chain; GitHub keeps only one pending run per group, so a newer pending release replaces an older
+pending one — which is the desired outcome here, since the newer `main` commit contains it.
+
+If a repository ruleset ever restricts tag creation, allow `deploy/production/*` for GitHub Actions
+or the watermark/quiesce writes will fail (and a failed watermark write restores traffic and
+quiesces — fail closed).
+
+### Destructive migration guard
+
+`.github/scripts/migration-guard/` statically scans each migration's `up()` (comments ignored,
+`down()` ignored, raw SQL matched only inside string literals — quoted strings and heredoc/nowdoc
+bodies such as `DB::statement(<<<'SQL' … SQL)`) for `drop-column`
+(`dropColumn`, `dropTimestamps`, `dropSoftDeletes`, `dropMorphs`, `dropRememberToken`,
+`dropConstrainedForeignId`), `rename-column`, `column-change` (`->change()`), `rename-table`,
+`drop-table`, `data-loss` (`truncate`/`delete`/`forceDelete`) and destructive `raw-sql` (`DROP
+TABLE/COLUMN`, `RENAME TO/COLUMN`, `TRUNCATE`, `DELETE FROM`, `ALTER COLUMN … TYPE`). Constraint and
+index maintenance is not flagged.
+
+- **Production (block):** preflight scans every migration changed between the watermark and the
+  candidate; any unacknowledged finding stops the release before approval is even requested. Skipped
+  on the bootstrap release (empty database, no running revision to break).
+- **PRs (warn):** ci.yml's `migration-guard` job annotates the same findings, never gating.
+- **Acknowledging a contract-phase change:** once the running release no longer uses what is being
+  dropped, add `// migration-guard: allow <reason>` to the migration. It stays in the report, but no
+  longer blocks.
+- **Planned maintenance:** a `workflow_dispatch` with `allow_destructive_migrations=true` runs a
+  release despite findings (still behind approval). Plan the application rollback story first — an
+  application rollback cannot undo the schema change.
+
+### Migration and seeding
+
+`sushigo-prod-migrate` is a Cloud Run Job re-deployed on every release with the **same digest** as
+the candidate, running `php artisan migrate --force` once (`--tasks 1 --max-retries 0`) as the
+runtime SA with the same Secret Manager bindings, so no Production database credential exists on
+the GitHub side (unlike QA's runner-side `migrate`, see "Known duplication" above). It never runs
+from container startup.
+
+Seeding is never automatic. A `workflow_dispatch` with `seed_reference_data=true` also runs
+`Database\Seeders\Production\ProductionSeeder` (idempotent system/reference data only — roles,
+permissions, Passport clients, base users; see "Seeding" above) as the separate
+`sushigo-prod-seed` job with `PROD_SEEDER_*_PASSWORD` secrets. Demo seeders are never run against
+Production. Use it for the bootstrap release, or later after adding new reference data.
+
+### Rollback and resume
+
+- **Automatic, during a release:** a failure before the traffic shift leaves traffic on the previous
+  revision (the candidate never received any); a failure after it restores the exact previous
+  traffic split. Either way, once the migration has started, the queue is quiesced.
+- **Manual:** run **Production rollback / resume** with `action=rollback` (and a `reason`). It
+  quiesces the queue *first*, cancels every requested/queued/pending/waiting/in-progress
+  deploy-production run, shifts 100% traffic to the revision tagged `previous` (or an explicit
+  `revision`), and verifies `/api/v1/health/ready`. No image is rebuilt. It deliberately has no
+  `environment:` so it never waits on the approval gate.
+- **Resume:** after investigating, run it with `action=resume`. That only removes the quiesce tag;
+  the next release still has to pass every guard.
+- **Database rollback** stays a separate, manual decision (`php artisan migrate:rollback` via a one-
+  off `gcloud run jobs execute sushigo-prod-migrate --args artisan,migrate:rollback,--force`, or a
+  forward fix) — never implied by an application rollback.
+
+### Release metadata
+
+Every `release` run writes `production-release.json` (commit, CI run, image reference and digest,
+migration/seed result, candidate revision, previous traffic, readiness/smoke/promotion results,
+watermark before/after, restore/quiesce outcome, run URL) to the step summary and uploads it as the
+`production-release` artifact.
+
+### Provisioning runbook (one-time)
+
+1. `BILLING_ACCOUNT=<id> ./scripts/gcp/provision-production.sh` (dry run), review, then re-run with
+   `--apply`. It creates `sushigo-prod`, enables APIs, creates the deploy and runtime SAs, the WIF pool
+   (restricted to this repository's `main`), grants `run.admin` + `iam.serviceAccountUser` (on the
+   runtime SA) to the deploy SA, `artifactregistry.reader` on `sushigo-app`'s repository to the Cloud
+   Run service agent, and empty `PROD_*` secrets readable only by the runtime SA.
+2. Provision Production's own PostgreSQL database (never shared with QA/Demo) and add every secret
+   value (`gcloud secrets versions add …`) — the script prints the exact list.
+3. Set `PROD_GCP_PROJECT_NUMBER` / `PROD_GCP_REGION`, add required reviewers plus `SMOKE_TEST_EMAIL` /
+   `SMOKE_TEST_PASSWORD` to the `production` Environment.
+4. `gh variable set PRODUCTION_DEPLOY_ENABLED --body true`, then bootstrap once by hand:
+   `gh workflow run deploy-production.yml -f ci_run_id=<latest green CI run on main> -f seed_reference_data=true`
+   and approve it. The smoke user must be one the seeder creates (or create it before the smoke step
+   runs), and its password must be a real secret — never a documented default.
+5. Map `admin.sushigo-romita.com` to `sushigo-prod` (`gcloud beta run domain-mappings create …`,
+   printed by the script) and add the DNS records; Cloud Run issues the HTTPS certificate.
 
 ## Migrations
 
@@ -560,6 +718,8 @@ have a concrete starting checklist:
       requirement), or every deploy fails with a permission error.
 - [x] Create the `qa` GitHub Environment (#634) — no required reviewers, no branch restriction, per
       TD-07. `demo`/`production` still open — create those the same way when #635/#636 land.
+      *(#636: `production` gets required reviewers during initial adoption — see TD-07's correction
+      note; creating it is a provisioning-runbook step, not done by the workflow.)*
 - [ ] Point `demo.sushigo-romita.com` and `admin.sushigo-romita.com` at their respective Cloud Run
       services (domain mapping, same mechanism already used for `preview.sushigo-romita.com`).
 - [x] Build the `sushigo-api-prod` and `sushigo-api-preview` build-and-push workflows (triggered on
@@ -572,7 +732,8 @@ have a concrete starting checklist:
       *(#633 — `_release-build.yml`'s `digest` output; #635/#636 still need to actually consume it.)*
 - [ ] Give Demo's and Production's **full chains (migration + deploy)** their own `concurrency`
       group each (queued, not parallel) so two runs against the same environment never execute
-      simultaneously — migration step included, not just deploy.
+      simultaneously — migration step included, not just deploy. *(Production done in #636 —
+      workflow-level `production-release-<repo>`; Demo still open.)*
 - [x] Give QA's new migration step its own database-scoped `concurrency` group, independent of
       `deploy-preview.yml`'s existing per-`service_suffix` group — every QA-suffixed service shares
       one database, so two differently-suffixed dispatches could otherwise race `php artisan
@@ -585,16 +746,22 @@ have a concrete starting checklist:
       lock only for the migration step, not through manual validation) and its accepted trade-off.
 - [ ] Add a mandatory ancestry check, covering the same full chain, to both Demo's and Production's
       pipelines — each rejecting a commit that is not a descendant of its own persisted watermark,
-      never compared against "whatever is currently serving traffic."
+      never compared against "whatever is currently serving traffic." *(Production done in #636 —
+      `guard.js` + the `deploy/production/watermark` tag; Demo still open, #635.)*
 - [ ] Add a post-deploy health check using `/api/v1/health` (not `/api/up`) to Demo's and
       Production's deploy steps, run against the new revision before it receives traffic.
-- [ ] Extend that check (or add a second one) to cover `APP_KEY`, `APP_URL`, and OAuth key
-      readability — `/api/v1/health` alone only proves database connectivity.
-- [ ] Add a CI check flagging destructive migration operations (dropped/renamed columns) on a PR,
+      *(Production done in #636, using `/api/v1/health/ready` on the candidate URL; Demo still open.)*
+- [x] Extend that check (or add a second one) to cover `APP_KEY`, `APP_URL`, and OAuth key
+      readability — `/api/v1/health` alone only proves database connectivity. *(#636 —
+      `/api/v1/health/ready`; Demo can reuse it.)*
+- [x] Add a CI check flagging destructive migration operations (dropped/renamed columns) on a PR,
       since Demo/Production promote automatically and a destructive migration is not
-      expand/contract-safe for a revision still receiving traffic during its health check.
+      expand/contract-safe for a revision still receiving traffic during its health check. *(#636 —
+      `migration-guard`: warn on PRs, block in Production's preflight; Demo can reuse the CLI.)*
 - [ ] Make Demo's and Production's rollback each quiesce their own entire promotion queue and
       re-verify the ancestry/watermark check immediately before any subsequent traffic shift.
+      *(Production done in #636 — `production-rollback.yml` + the `deploy/production/quiesced` tag;
+      Demo still open.)*
 - [ ] Switch `sushigo-preview`'s Cloud Run ingress to authenticated-only — it currently deploys with
       `--allow-unauthenticated`, which contradicts the "Internal / CI only" trust boundary this
       contract assigns to QA. **Not part of #634** — that issue's Technical Tasks/Acceptance

@@ -16,6 +16,14 @@ This document describes the deployment infrastructure, branch strategy, and CI/C
 > concurrency/ancestry, health-check, and rollback guards TD-07 adds on top of the bare trigger
 > description below. `doc/conventions/ci/deployment.md` is the current operational reference;
 > sections below (§2, §4–§7) have not been reconciled with it beyond this callout.
+>
+> **Production is implemented as of #636** by `.github/workflows/deploy-production.yml` (automatic
+> on green `main`, initial-adoption approval gate, one-shot migration Cloud Run Job, `--no-traffic`
+> candidate gated by `/api/v1/health/ready` + smoke test, watermark/quiesce anti-rollback guards) and
+> `production-rollback.yml`. §6.2's diagram predates that: Production does **not** rebuild an image
+> on deploy — it deploys the `prod-cloudrun` digest `_release-build.yml` already published — and its
+> database is Production's own, never shared with QA/Preview. See deployment.md → "Production
+> pipeline".
 
 ---
 

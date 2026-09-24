@@ -5,8 +5,10 @@ name: _release-build
 # once per build target (`preview`, `prod-cloudrun`) — see ci.yml's `release-build-preview` /
 # `release-build-prod-cloudrun` jobs. Builds exactly one immutable image per target per commit,
 # tagged `release-<short-sha>`, and exposes its Artifact Registry digest as an output for the
-# downstream Demo (#635) / Production (#636) deploy pipelines to consume. Neither of those
-# pipelines may rebuild the application image — this workflow is the only place that does.
+# downstream Demo (#635) / Production (#636) deploy pipelines to consume — both as a job output
+# and as a `release-<target>` artifact (`release.json`: target, commit, image_uri, digest), which
+# deploy-production.yml downloads from the triggering CI run. Neither of those pipelines may
+# rebuild the application image — this workflow is the only place that does.
 #
 # This workflow never runs for a PR and never runs unless the caller's ci-gate already passed —
 # see ci.yml's `if:` on the calling jobs. It checks out `github.sha` (the exact commit this run's
@@ -117,6 +119,34 @@ jobs:
           docker push "${IMAGE_URI}"
           DIGEST="$(docker inspect --format='{{index .RepoDigests 0}}' "${IMAGE_URI}" | sed 's/^.*@//')"
           echo "digest=${DIGEST}" >> "$GITHUB_OUTPUT"
+
+      # Release manifest artifact (#636): deploy-production.yml runs as a separate workflow_run-
+      # triggered workflow, so it cannot read this job's `digest` output directly. It downloads this
+      # artifact from the exact CI run that triggered it instead — the digest is still resolved
+      # exactly once, here, and never re-resolved from the mutable `release-<sha>` tag downstream.
+      - name: Write release manifest
+        env:
+          DIGEST: ${{ steps.push.outputs.digest }}
+          TARGET: ${{ inputs.target }}
+        run: |
+          set -euo pipefail
+          jq -n \
+            --arg target "${TARGET}" \
+            --arg commit "${{ github.sha }}" \
+            --arg image_uri "${IMAGE_URI}" \
+            --arg digest "${DIGEST}" \
+            --arg run_id "${{ github.run_id }}" \
+            '{target: $target, commit: $commit, image_uri: $image_uri, digest: $digest, run_id: $run_id}' \
+            > release.json
+          cat release.json
+
+      - name: Upload release manifest
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ inputs.target }}
+          path: release.json
+          if-no-files-found: error
+          retention-days: 90
 
       - name: Release summary
         if: always()

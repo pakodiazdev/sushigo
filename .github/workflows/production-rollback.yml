@@ -1,0 +1,201 @@
+name: Production rollback / resume
+
+# Manual Production application rollback and promotion-queue control (#636, per TD-07 "Rollback
+# semantics" and "Anti-rollback guards"). See doc/conventions/ci/deployment.md → "Production
+# pipeline" for the runbook.
+#
+#   rollback — (1) quiesces Production's promotion queue FIRST (tag `deploy/production/quiesced`),
+#              (2) cancels every queued / waiting / in-flight deploy-production.yml run, then
+#              (3) shifts 100% of traffic back to a previous revision — by default the one tagged
+#              `previous` by the last successful release — and verifies /api/v1/health/ready. No
+#              image is rebuilt: the prior revision's digest is still resolvable by Cloud Run. The
+#              watermark is NOT moved back, so the rolled-back commit can never be re-promoted.
+#   resume   — removes the quiesce tag once a human has investigated. It does not deploy anything;
+#              the next green `main` commit (or a deploy-production.yml dispatch of a newer CI run)
+#              goes through every guard again.
+#
+# Database rollback is deliberately NOT part of this workflow — it is a separate, manual decision
+# (`php artisan migrate:rollback` or a forward-fixing migration), never implied by an application
+# rollback.
+#
+# No `environment:` here on purpose: a rollback must never wait on the approval gate. It uses the
+# repository-level PROD_GCP_PROJECT_NUMBER / PROD_GCP_REGION vars and the same deploy identity.
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "rollback = restore a previous revision and quiesce promotions; resume = lift the quiesce"
+        type: choice
+        options: [rollback, resume]
+        required: true
+      revision:
+        description: "rollback only — revision to restore (default: the revision tagged `previous`)"
+        required: false
+        default: ""
+      reason:
+        description: "Why (recorded on the quiesce tag and in the run summary)"
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-rollback-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  rollback:
+    name: rollback
+    if: inputs.action == 'rollback'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: write
+      id-token: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PROJECT_ID: sushigo-prod
+      SERVICE: sushigo-prod
+      REGION: ${{ vars.PROD_GCP_REGION }}
+      REASON: ${{ inputs.reason }}
+      RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Quiesce Production's promotion queue
+        run: |
+          set -euo pipefail
+          # Prefer the peeled (^{}) line: the watermark is an annotated tag, and the quiesce tag must
+          # point at the commit, not at the watermark's tag object.
+          REFS="$(git ls-remote origin 'refs/tags/deploy/production/watermark' 'refs/tags/deploy/production/watermark^{}')"
+          WATERMARK="$(awk '$2 ~ /\^\{\}$/ {print $1}' <<< "${REFS}")"
+          if [ -z "${WATERMARK}" ]; then
+            WATERMARK="$(awk 'NR == 1 {print $1}' <<< "${REFS}")"
+          fi
+          bash .github/scripts/production-release/tag.sh set deploy/production/quiesced "${WATERMARK:-$GITHUB_SHA}" \
+            "Rolled back by ${GITHUB_ACTOR} (${RUN_URL}): ${REASON}"
+
+      - name: Cancel queued and in-flight Production releases
+        run: |
+          set -euo pipefail
+          for status in requested queued pending waiting in_progress; do
+            gh run list --repo "${GITHUB_REPOSITORY}" --workflow deploy-production.yml --status "${status}" \
+              --json databaseId --jq '.[].databaseId' | while read -r id; do
+                echo "Cancelling deploy-production run ${id} (${status})"
+                gh run cancel "${id}" --repo "${GITHUB_REPOSITORY}" || echo "::warning::could not cancel run ${id}"
+              done
+          done
+
+      - name: Auth to Google Cloud (WIF, sushigo-prod)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: projects/${{ vars.PROD_GCP_PROJECT_NUMBER }}/locations/global/workloadIdentityPools/github-pool/providers/github-provider
+          service_account: gha-sushigo-prod@sushigo-prod.iam.gserviceaccount.com
+
+      - name: Setup gcloud
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: sushigo-prod
+
+      - name: Resolve the rollback target
+        id: target
+        env:
+          REVISION_INPUT: ${{ inputs.revision }}
+        run: |
+          set -euo pipefail
+          SVC_JSON="$(gcloud run services describe "${SERVICE}" --project "${PROJECT_ID}" --region "${REGION}" --format=json)"
+          CURRENT="$(jq -r '[.status.traffic[]? | select((.percent // 0) > 0)] | max_by(.percent) | .revisionName // ""' <<< "${SVC_JSON}")"
+          TARGET="${REVISION_INPUT}"
+          if [ -z "${TARGET}" ]; then
+            TARGET="$(jq -r '[.status.traffic[]? | select(.tag == "previous") | .revisionName] | first // ""' <<< "${SVC_JSON}")"
+          fi
+          if [ -z "${TARGET}" ]; then
+            echo "::error::no revision tagged 'previous' — re-run with an explicit revision (gcloud run revisions list --service ${SERVICE})"
+            exit 1
+          fi
+          if [[ ! "${TARGET}" =~ ^[a-z0-9-]+$ ]]; then
+            echo "::error::'${TARGET}' is not a valid revision name"
+            exit 1
+          fi
+          READY="$(gcloud run revisions describe "${TARGET}" --project "${PROJECT_ID}" --region "${REGION}" --format=json \
+            | jq -r '[.status.conditions[]? | select(.type == "Ready") | .status] | first // ""')"
+          if [ "${READY}" != "True" ]; then
+            echo "::error::revision ${TARGET} is not Ready (status '${READY}')"
+            exit 1
+          fi
+          {
+            echo "current=${CURRENT}"
+            echo "target=${TARGET}"
+            echo "service_url=$(jq -r .status.url <<< "${SVC_JSON}")"
+          } >> "$GITHUB_OUTPUT"
+          echo "Rolling back ${CURRENT} → ${TARGET}"
+
+      - name: Shift traffic to the rollback target
+        env:
+          TARGET: ${{ steps.target.outputs.target }}
+        run: |
+          set -euo pipefail
+          gcloud run services update-traffic "${SERVICE}" \
+            --project "${PROJECT_ID}" --region "${REGION}" \
+            --to-revisions "${TARGET}=100" --quiet
+
+      - name: Verify readiness after rollback
+        env:
+          SERVICE_URL: ${{ steps.target.outputs.service_url }}
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 12); do
+            CODE="$(curl -s --max-time 10 -o /dev/null -w '%{http_code}' "${SERVICE_URL}/api/v1/health/ready" || echo "000")"
+            if [ "${CODE}" = "200" ]; then
+              echo "✅ Production ready after rollback"
+              exit 0
+            fi
+            echo "  attempt ${i}: HTTP ${CODE}, retrying in 5s..."
+            sleep 5
+          done
+          echo "::error::Production is not ready after rollback — the database schema may need attention (see deployment.md)"
+          exit 1
+
+      - name: Rollback summary
+        if: always()
+        env:
+          CURRENT: ${{ steps.target.outputs.current }}
+          TARGET: ${{ steps.target.outputs.target }}
+          JOB_STATUS: ${{ job.status }}
+        run: |
+          {
+            echo "### ⏪ Production rollback — ${JOB_STATUS}"
+            echo ""
+            echo "- **From**: \`${CURRENT}\`"
+            echo "- **To**: \`${TARGET}\`"
+            echo "- **Reason**: ${REASON}"
+            echo "- **Promotion queue**: quiesced — run this workflow with \`action=resume\` once resolved"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  resume:
+    name: resume
+    if: inputs.action == 'resume'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REASON: ${{ inputs.reason }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Lift the quiesce
+        run: bash .github/scripts/production-release/tag.sh delete deploy/production/quiesced
+
+      - name: Resume summary
+        run: |
+          {
+            echo "### ▶️ Production promotions resumed"
+            echo ""
+            echo "- **By**: ${GITHUB_ACTOR}"
+            echo "- **Reason**: ${REASON}"
+            echo "- The next green \`main\` commit must still strictly descend from the watermark."
+          } >> "$GITHUB_STEP_SUMMARY"
