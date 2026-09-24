@@ -51,7 +51,7 @@ class DemoResetCommandTest extends TestCase
     }
 
     #[Test]
-    public function refuses_to_seed_demo_with_the_hardcoded_fallback_passwords(): void
+    public function refuses_to_seed_demo_with_the_hardcoded_fallback_passwords_and_keeps_existing_data(): void
     {
         app()->detectEnvironment(fn () => 'demo');
         Config::set('seeders.passwords', [
@@ -59,10 +59,32 @@ class DemoResetCommandTest extends TestCase
             'employee' => 'operator-employee-secret',
             'inventory' => 'operator-inventory-secret',
         ]);
+        $existing = User::factory()->create();
 
         $this->artisan('demo:reset')
             ->expectsOutputToContain('SEEDER_ADMIN_PASSWORD')
             ->assertExitCode(1);
+
+        $this->assertModelExists($existing);
+    }
+
+    #[Test]
+    public function a_seeder_failure_rolls_back_to_the_previous_dataset(): void
+    {
+        $this->enterDemoWithRealPasswords();
+        $this->artisan('demo:reset')->assertExitCode(0);
+        $usersBefore = User::orderBy('email')->pluck('email')->all();
+        $itemsBefore = Item::count();
+
+        // Fails late in the chain — DemoUserSeeder runs after truncation and several seeders.
+        Config::set('demo.account.role', 'role-that-does-not-exist');
+
+        $this->artisan('demo:reset')
+            ->expectsOutputToContain('existing data kept')
+            ->assertExitCode(1);
+
+        $this->assertSame($usersBefore, User::orderBy('email')->pluck('email')->all());
+        $this->assertSame($itemsBefore, Item::count());
     }
 
     #[Test]

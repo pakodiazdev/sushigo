@@ -531,7 +531,9 @@ fallback. Demo is public, so an operator account must never have a password read
 The demo account's own password (`SEEDER_DEMO_PASSWORD`) is intentionally shareable.
 
 `php artisan demo:reset` (refuses unless `APP_ENV=demo`) truncates every table except `migrations`, so
-the schema stays at the deployed release, then runs `DemoSeeder`. It is only ever invoked explicitly:
+the schema stays at the deployed release, then runs `DemoSeeder`. It checks the seeder passwords
+first, then truncates and seeds inside **one transaction** (Postgres `TRUNCATE` is transactional), so
+a missing secret or a failing seeder leaves the current dataset in place instead of an empty Demo. It is only ever invoked explicitly:
 by `demo-ops.yml`'s `reset` action (manual dispatch, or its nightly 09:00 UTC schedule), never by the
 promotion chain. TD-07's "seeding stays an explicitly-invoked step for Demo" holds. `reset` checks out
 **the watermark commit** so the seeders match the deployed schema.

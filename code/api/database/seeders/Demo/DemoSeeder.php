@@ -64,7 +64,7 @@ class DemoSeeder extends Seeder
 
     public function run(): void
     {
-        $this->guardAgainstFallbackPasswords();
+        self::assertSafeToSeed();
 
         $this->command->info('🎭 Seeding the canonical Demo dataset...');
 
@@ -113,7 +113,13 @@ class DemoSeeder extends Seeder
         $this->command->info('✅ Demo dataset seeded');
     }
 
-    private function guardAgainstFallbackPasswords(): void
+    /**
+     * Also called by `demo:reset` before it touches any table, so a missing
+     * secret fails fast instead of after the current dataset is gone.
+     *
+     * @throws RuntimeException
+     */
+    public static function assertSafeToSeed(): void
     {
         if (! app()->environment('demo')) {
             return;

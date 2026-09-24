@@ -13,7 +13,10 @@ use Throwable;
  * Restores the public Demo's canonical dataset (#635): truncates every
  * application table (schema and migration history are kept, so this never
  * needs to match a different code revision's migrations) and re-runs
- * DemoSeeder. Refuses to run anywhere but APP_ENV=demo — it is destructive by
+ * DemoSeeder — atomically. Postgres TRUNCATE is transactional, so truncation
+ * and seeding share one transaction: a missing secret or any seeder failure
+ * rolls back to the dataset visitors were already using instead of leaving
+ * the public Demo empty until someone notices. Refuses to run anywhere but APP_ENV=demo — it is destructive by
  * design and must never be pointed at QA or Production data.
  *
  * Invoked explicitly only: by an operator, or by the demo-ops workflow's
@@ -35,13 +38,17 @@ class DemoReset extends Command
             return self::FAILURE;
         }
 
-        $this->info('🧹 Truncating Demo tables...');
-        $this->truncateApplicationTables();
-
         try {
-            $this->call('db:seed', ['--class' => DemoSeeder::class, '--force' => true]);
+            DemoSeeder::assertSafeToSeed();
+
+            DB::transaction(function () {
+                $this->info('🧹 Truncating Demo tables...');
+                $this->truncateApplicationTables();
+
+                $this->call('db:seed', ['--class' => DemoSeeder::class, '--force' => true]);
+            });
         } catch (Throwable $e) {
-            $this->error('❌ Demo seeding failed: '.$e->getMessage());
+            $this->error('❌ Demo reset failed, existing data kept: '.$e->getMessage());
 
             return self::FAILURE;
         }
@@ -51,20 +58,22 @@ class DemoReset extends Command
         return self::SUCCESS;
     }
 
+    /**
+     * `SET LOCAL` scopes the FK-trigger bypass to the surrounding transaction,
+     * so it ends with the commit or rollback instead of needing a reset.
+     */
     private function truncateApplicationTables(): void
     {
-        DB::statement('SET session_replication_role = replica;');
+        DB::statement('SET LOCAL session_replication_role = replica;');
 
-        try {
-            foreach (Schema::getTableListing() as $table) {
-                $name = str_contains($table, '.') ? substr(strrchr($table, '.'), 1) : $table;
+        foreach (Schema::getTableListing() as $table) {
+            $name = str_contains($table, '.') ? substr(strrchr($table, '.'), 1) : $table;
 
-                if (! in_array($name, self::PRESERVED_TABLES, true)) {
-                    DB::table($table)->truncate();
-                }
+            if (! in_array($name, self::PRESERVED_TABLES, true)) {
+                DB::table($table)->truncate();
             }
-        } finally {
-            DB::statement('SET session_replication_role = DEFAULT;');
         }
+
+        DB::statement('SET LOCAL session_replication_role = DEFAULT;');
     }
 }
