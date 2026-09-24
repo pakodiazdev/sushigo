@@ -35,8 +35,22 @@ const RAW_SQL =
 
 const ACK = /migration-guard:\s*allow[ \t]+(\S[^\r\n]*)/;
 
+// `<<<ID`, `<<<"ID"` (heredoc) or `<<<'ID'` (nowdoc), up to the end of the opening line.
+const HEREDOC_OPEN = /^<<<[ \t]*(["']?)([A-Za-z_][A-Za-z0-9_]*)\1[ \t]*\r?\n/;
+
+// Returns the offset just past a heredoc/nowdoc's closing identifier, or the end of the source when
+// it is unterminated. PHP >= 7.3 allows an indented closer followed by any non-identifier char
+// (e.g. `SQL);`), so the closer is the identifier alone at the start of a line (after whitespace).
+function heredocEnd(source, bodyStart, id) {
+  const closer = new RegExp(`(^|\\n)[ \\t]*${id}(?![A-Za-z0-9_])`, 'g');
+  closer.lastIndex = bodyStart;
+  const m = closer.exec(source);
+  return m ? m.index + m[0].length : source.length;
+}
+
 // Walks PHP source once, blanking comments (same length, newlines kept so offsets and line numbers
-// still line up) and recording string-literal ranges.
+// still line up) and recording string-literal ranges — quoted strings and heredoc/nowdoc bodies
+// alike, since raw SQL is routinely written as `DB::statement(<<<'SQL' … SQL)` in this codebase.
 function tokenize(source) {
   const out = source.split('');
   const strings = [];
@@ -44,7 +58,12 @@ function tokenize(source) {
   while (i < source.length) {
     const ch = source[i];
     const next = source[i + 1];
-    if (ch === "'" || ch === '"') {
+    const heredoc = ch === '<' ? HEREDOC_OPEN.exec(source.slice(i, i + 256)) : null;
+    if (heredoc) {
+      const end = heredocEnd(source, i + heredoc[0].length, heredoc[2]);
+      strings.push([i, end]);
+      i = end;
+    } else if (ch === "'" || ch === '"') {
       const start = i;
       i += 1;
       while (i < source.length && source[i] !== ch) {

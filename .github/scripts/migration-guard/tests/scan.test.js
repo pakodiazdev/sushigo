@@ -182,3 +182,63 @@ test('the real legacy cost/price drop migration is flagged', () => {
   assert.ok(result.findings.some((f) => f.rule === 'drop-column'));
   assert.equal(result.blocking, true);
 });
+
+test('flags destructive SQL inside a nowdoc (Codex P1 on #663)', () => {
+  const src = migration([
+    "        DB::statement(<<<'SQL'",
+    '            ALTER TABLE stock DROP COLUMN legacy_value',
+    '            SQL);',
+  ].join('\n'));
+  const findings = findDestructiveOperations(src);
+  assert.deepEqual(findings.map((f) => f.rule), ['raw-sql']);
+  assert.ok(findings[0].snippet.includes("<<<'SQL'"));
+});
+
+test('flags destructive SQL inside a heredoc, quoted or bare identifier', () => {
+  for (const opener of ['<<<SQL', '<<<"SQL"', '<<< SQL']) {
+    const src = migration([
+      `        DB::unprepared(${opener}`,
+      '        TRUNCATE audit_logs;',
+      'SQL',
+      '        );',
+    ].join('\n'));
+    assert.deepEqual(rules(src), ['raw-sql'], opener);
+  }
+});
+
+test('non-destructive heredoc SQL is not flagged', () => {
+  const src = migration([
+    "        DB::statement(<<<'SQL'",
+    '            UPDATE stock SET total_value = 0 -- no drop here',
+    '            SQL);',
+  ].join('\n'));
+  assert.deepEqual(rules(src), []);
+});
+
+test("quotes, # and // inside a heredoc don't derail the rest of the scan", () => {
+  const src = migration([
+    "        DB::statement(<<<'SQL'",
+    "            UPDATE items SET note = 'it''s # not a comment // either'",
+    '            SQL);',
+    "        Schema::table('a', fn (Blueprint $t) => $t->dropColumn('x'));",
+  ].join('\n'));
+  assert.deepEqual(rules(src), ['drop-column']);
+});
+
+test('a heredoc closing identifier must match the opener, not a prefix of a longer word', () => {
+  const src = migration([
+    "        DB::statement(<<<'SQL'",
+    '            SQLITE_NOTE is not the terminator',
+    '            DROP TABLE legacy',
+    '            SQL);',
+  ].join('\n'));
+  assert.deepEqual(rules(src), ['raw-sql']);
+});
+
+test('drop statements inside a heredoc in down() are ignored', () => {
+  const src = migration(
+    "        Schema::create('t', fn (Blueprint $t) => $t->id());",
+    "        DB::statement(<<<'SQL'\n            DROP TABLE t\n            SQL);",
+  );
+  assert.deepEqual(rules(src), []);
+});

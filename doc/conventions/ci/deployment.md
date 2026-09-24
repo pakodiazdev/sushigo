@@ -546,7 +546,8 @@ quiesces — fail closed).
 ### Destructive migration guard
 
 `.github/scripts/migration-guard/` statically scans each migration's `up()` (comments ignored,
-`down()` ignored, raw SQL matched only inside string literals) for `drop-column`
+`down()` ignored, raw SQL matched only inside string literals — quoted strings and heredoc/nowdoc
+bodies such as `DB::statement(<<<'SQL' … SQL)`) for `drop-column`
 (`dropColumn`, `dropTimestamps`, `dropSoftDeletes`, `dropMorphs`, `dropRememberToken`,
 `dropConstrainedForeignId`), `rename-column`, `column-change` (`->change()`), `rename-table`,
 `drop-table`, `data-loss` (`truncate`/`delete`/`forceDelete`) and destructive `raw-sql` (`DROP
