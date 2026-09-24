@@ -578,7 +578,7 @@ i.e. deploy "Demo" into QA's project. Secrets reuse #634's names (no repo-level 
 | env var | `DEMO_STATE_BUCKET` | e.g. `sushigo-demo-promotion-state` |
 | env var | `DEMO_APP_URL` | `https://demo.sushigo-romita.com` |
 | env var | `DEMO_DB_PORT` | optional, default `5432` |
-| env var | `DEMO_ACCOUNT_EMAIL` | optional, default `demo@sushigo.com` (must match the API's `DEMO_ACCOUNT_EMAIL`, if overridden) |
+| env var | `DEMO_ACCOUNT_EMAIL` | optional, default `demo@sushigo.com`. Passed to the Cloud Run revision (`config/demo.php`), the smoke login and `demo-ops`' reset, so all three always agree |
 | env secret | `DB_HOST`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`, `APP_KEY` | Demo's own database and key (the migrate/reset jobs run on the runner). Same "two stores kept in sync" caveat as QA's `PREVIEW_*` note above |
 | env secret | `SEEDER_ADMIN_PASSWORD`, `SEEDER_EMPLOYEE_PASSWORD`, `SEEDER_INVENTORY_PASSWORD` | Real, non-default operator passwords (`DemoSeeder` refuses fallbacks) |
 | env secret | `SEEDER_DEMO_PASSWORD` | The public demo account's password, published next to the demo link. Also used by the smoke test |

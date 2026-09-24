@@ -145,6 +145,8 @@ jobs:
           DB_USERNAME: ${{ secrets.DB_USERNAME }}
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
           MAIL_MAILER: log
+          # Must match the value _deploy-demo.yml gives the API revision and its smoke login.
+          DEMO_ACCOUNT_EMAIL: ${{ vars.DEMO_ACCOUNT_EMAIL || 'demo@sushigo.com' }}
           SEEDER_ADMIN_PASSWORD: ${{ secrets.SEEDER_ADMIN_PASSWORD }}
           SEEDER_EMPLOYEE_PASSWORD: ${{ secrets.SEEDER_EMPLOYEE_PASSWORD }}
           SEEDER_INVENTORY_PASSWORD: ${{ secrets.SEEDER_INVENTORY_PASSWORD }}

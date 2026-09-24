@@ -59,6 +59,9 @@ jobs:
       STATE_BUCKET: ${{ vars.DEMO_STATE_BUCKET }}
       DEMO_APP_URL: ${{ vars.DEMO_APP_URL }}
       DB_PORT: ${{ vars.DEMO_DB_PORT || '5432' }}
+      # One resolved value for the API revision (config/demo.php), the smoke login and
+      # demo-ops' reset — they must agree or every promotion fails its smoke test.
+      DEMO_ACCOUNT_EMAIL: ${{ vars.DEMO_ACCOUNT_EMAIL || 'demo@sushigo.com' }}
     steps:
       - name: Validate Demo configuration
         env:
@@ -211,7 +214,7 @@ jobs:
             --platform managed \
             --allow-unauthenticated \
             --service-account "$RUNTIME_SA" \
-            --update-env-vars "APP_ENV=demo,APP_DEBUG=false,APP_URL=${DEMO_APP_URL},DB_CONNECTION=pgsql,DB_PORT=${DB_PORT},MAIL_MAILER=log" \
+            --update-env-vars "APP_ENV=demo,APP_DEBUG=false,APP_URL=${DEMO_APP_URL},DB_CONNECTION=pgsql,DB_PORT=${DB_PORT},MAIL_MAILER=log,DEMO_ACCOUNT_EMAIL=${DEMO_ACCOUNT_EMAIL}" \
             --set-secrets "APP_KEY=DEMO_APP_KEY:latest,DB_HOST=DEMO_DB_HOST:latest,DB_DATABASE=DEMO_DB_DATABASE:latest,DB_USERNAME=DEMO_DB_USER:latest,DB_PASSWORD=DEMO_DB_PASS:latest,/run/secrets/oauth_private/value.key=DEMO_OAUTH_PRIVATE:latest,/run/secrets/oauth_public/value.key=DEMO_OAUTH_PUBLIC:latest" \
             --tag candidate \
             $TRAFFIC_FLAG \
@@ -250,7 +253,7 @@ jobs:
         if: steps.gate.outputs.proceed == 'true'
         env:
           BASE_URL: ${{ steps.deploy.outputs.candidate_url }}
-          SMOKE_TEST_EMAIL: ${{ vars.DEMO_ACCOUNT_EMAIL || 'demo@sushigo.com' }}
+          SMOKE_TEST_EMAIL: ${{ env.DEMO_ACCOUNT_EMAIL }}
           SMOKE_TEST_PASSWORD: ${{ secrets.SEEDER_DEMO_PASSWORD }}
         run: bash .github/scripts/deploy-smoke-test.sh
 
