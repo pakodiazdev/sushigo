@@ -25,6 +25,7 @@ Este documento describe la infraestructura de despliegue, la estrategia de ramas
 | Ambiente | URL | Rama fuente | Trigger de despliegue |
 |----------|-----|------------|----------------------|
 | **Preview** | `preview.sushigo-romita.com` | `feature/*` | Manual — desde la feature branch tras pasar el review del PR |
+| **Demo** | `demo.sushigo-romita.com` | `main` | Automático — `deploy-demo` tras `ci-gate` + `release-build-preview` en `main`, proyecto GCP propio (`sushigo-demo`), datos sintéticos restablecibles (#635, ver [`deployment.md`](../../conventions/ci/deployment.md) → "Demo") |
 | **Producción** | `admin.sushigo-romita.com` | `main` | Automático — después de que el pipeline CI completo pase en el merge a `main` |
 
 ---
