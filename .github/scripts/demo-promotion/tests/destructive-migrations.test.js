@@ -91,6 +91,55 @@ test('reports the real line number of each finding', () => {
   assert.equal(finding.text, "$table->dropColumn('cost');");
 });
 
+test('flags a required column added to an existing table', () => {
+  const closure = migration(`        Schema::table('users', function (Blueprint $table) {
+            $table->string('required_code');
+        });`);
+  assert.deepEqual(operations(closure), ['required column added to existing table']);
+
+  const arrow = migration("        Schema::table('users', fn (Blueprint $t) => $t->foreignId('branch_id')->constrained());");
+  assert.deepEqual(operations(arrow), ['required column added to existing table']);
+});
+
+test('reports the required column on its own line, even when the chain spans lines', () => {
+  const source = migration(`        Schema::table('users', function (Blueprint $table) {
+            $table->string('note')->nullable();
+            $table->unsignedInteger('level')
+                ->comment('seniority');
+        });`);
+  const [finding] = findDestructiveOperations(source);
+  assert.equal(finding.operation, 'required column added to existing table');
+  assert.equal(finding.line, 9);
+  assert.equal(finding.text, "$table->unsignedInteger('level') ->comment('seniority');");
+});
+
+test('nullable, defaulted or current-timestamp columns on existing tables are safe', () => {
+  const source = migration(`        Schema::table('users', function (Blueprint $table) {
+            $table->string('nickname')->nullable();
+            $table->boolean('is_demo')->default(false);
+            $table->timestamp('seen_at')->useCurrent();
+            $table->foreignId('branch_id')->nullable()->constrained();
+            $table->timestamps();
+            $table->softDeletes();
+            $table->index('nickname');
+        });`);
+  assert.deepEqual(findDestructiveOperations(source), []);
+});
+
+test('required columns inside Schema::create are fine — a new table has no old readers', () => {
+  const source = migration(`        Schema::create('things', function (Blueprint $table) {
+            $table->id();
+            $table->string('name');
+        });
+        Schema::table('users', fn (Blueprint $t) => $t->string('alias')->nullable());`);
+  assert.deepEqual(findDestructiveOperations(source), []);
+});
+
+test('nullable(false) does not make an added column safe', () => {
+  const source = migration("        Schema::table('users', fn (Blueprint $t) => $t->string('code')->nullable(false));");
+  assert.deepEqual(operations(source), ['required column added to existing table']);
+});
+
 test('a file without an up() method has nothing to flag', () => {
   assert.deepEqual(findDestructiveOperations('<?php // helper'), []);
 });

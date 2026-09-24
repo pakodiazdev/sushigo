@@ -14,6 +14,11 @@
 // working without them. Nor is `->nullable()->change()`: relaxing NOT NULL never breaks the old
 // revision's reads or writes (tightening a column, e.g. a new `public_id` made NOT NULL, can break
 // the old revision's inserts, so every other `->change()` stays flagged).
+//
+// Adding a *required* column to an existing table is flagged too: a column added inside
+// `Schema::table(...)` with no `->nullable()`, `->default(...)` or `->useCurrent()` either fails
+// on existing rows or makes the still-serving old revision's inserts fail. Columns defined inside
+// `Schema::create(...)` are not checked — a brand-new table has no old-revision readers or writers.
 
 const DESTRUCTIVE_PATTERNS = [
   { name: 'dropColumn', regex: /->\s*dropColumns?\s*\(/ },
@@ -96,11 +101,73 @@ function extractUpBody(source) {
   return null;
 }
 
+// Blueprint methods that add a column. Helpers that only add nullable columns (`timestamps`,
+// `softDeletes`, `nullableMorphs`, `rememberToken`, ...) and index/key helpers are deliberately absent.
+const COLUMN_TYPES = [
+  'bigIncrements', 'bigInteger', 'binary', 'boolean', 'char', 'date', 'dateTime', 'dateTimeTz',
+  'decimal', 'double', 'enum', 'float', 'foreignId', 'foreignIdFor', 'foreignUlid', 'foreignUuid',
+  'geography', 'geometry', 'increments', 'integer', 'ipAddress', 'json', 'jsonb', 'longText',
+  'macAddress', 'mediumIncrements', 'mediumInteger', 'mediumText', 'morphs', 'set', 'smallIncrements',
+  'smallInteger', 'string', 'text', 'time', 'timeTz', 'timestamp', 'timestampTz', 'tinyIncrements',
+  'tinyInteger', 'tinyText', 'ulid', 'ulidMorphs', 'unsignedBigInteger', 'unsignedDecimal',
+  'unsignedInteger', 'unsignedMediumInteger', 'unsignedSmallInteger', 'unsignedTinyInteger', 'uuid',
+  'uuidMorphs', 'vector', 'year',
+];
+const COLUMN_ADDITION = new RegExp(`\\$\\w+\\s*->\\s*(?:${COLUMN_TYPES.join('|')})\\s*\\(`);
+const SAFE_COLUMN_MODIFIER = /->\s*(?:nullable\s*\(\s*(?:true)?\s*\)|default\s*\(|useCurrent\s*\(|change\s*\(|storedAs\s*\(|virtualAs\s*\(|generatedAs\s*\()/;
+
+/** Index of the parenthesis closing the one opened at `open`, skipping string contents. */
+function matchingParen(source, open) {
+  let depth = 0;
+  let quote = null;
+  for (let i = open; i < source.length; i += 1) {
+    const ch = source[i];
+    if (quote) {
+      if (ch === '\\') i += 1;
+      else if (ch === quote) quote = null;
+      continue;
+    }
+    if (ch === "'" || ch === '"') quote = ch;
+    else if (ch === '(') depth += 1;
+    else if (ch === ')') {
+      depth -= 1;
+      if (depth === 0) return i;
+    }
+  }
+  return source.length - 1;
+}
+
+/** Required (non-null, no-default) columns added inside `Schema::table(...)` calls. */
+function findRequiredColumnAdditions(up) {
+  const findings = [];
+  const call = /Schema::\s*table\s*\(/g;
+  let match;
+  while ((match = call.exec(up.body)) !== null) {
+    const open = match.index + match[0].length - 1;
+    const close = matchingParen(up.body, open);
+    const block = up.body.slice(open, close + 1);
+    let offset = open;
+    for (const statement of block.split(';')) {
+      const column = COLUMN_ADDITION.exec(statement);
+      if (column && !SAFE_COLUMN_MODIFIER.test(statement)) {
+        findings.push({
+          operation: 'required column added to existing table',
+          line: up.startLine + up.body.slice(0, offset + column.index).split('\n').length - 1,
+          text: `${statement.slice(column.index).trim().replace(/\s+/g, ' ')};`,
+        });
+      }
+      offset += statement.length + 1;
+    }
+    call.lastIndex = close;
+  }
+  return findings;
+}
+
 /** @returns {{ operation: string, line: number, text: string }[]} */
 function findDestructiveOperations(source) {
   const up = extractUpBody(stripComments(source));
   if (!up) return [];
-  const findings = [];
+  const findings = findRequiredColumnAdditions(up);
   up.body.split('\n').forEach((text, index) => {
     for (const { name, regex, unless } of DESTRUCTIVE_PATTERNS) {
       if (regex.test(text) && !(unless && unless.test(text))) {
@@ -108,7 +175,7 @@ function findDestructiveOperations(source) {
       }
     }
   });
-  return findings;
+  return findings.sort((a, b) => a.line - b.line);
 }
 
 /**
