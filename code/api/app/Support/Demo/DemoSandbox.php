@@ -20,8 +20,11 @@ final class DemoSandbox
 
     /**
      * Route names visitors must never reach in Demo: they create accounts or
-     * change credentials, which would let one visitor lock others out of the
-     * shared demo account or turn Demo into a free account host.
+     * change credentials (which would let one visitor lock others out of the
+     * shared demo account or turn Demo into a free account host), or upload,
+     * edit and delete media — UploadMediaRequest lets any authenticated user
+     * start an avatar gallery, so the shared account could otherwise fill the
+     * public instance's storage regardless of its read-only role.
      */
     public const BLOCKED_ROUTES = [
         'auth.register',
@@ -29,6 +32,9 @@ final class DemoSandbox
         'auth.verify-reset-token',
         'auth.reset-password',
         'auth.me.avatar',
+        'media.upload',
+        'media.assets.update',
+        'media.assets.delete',
     ];
 
     /**

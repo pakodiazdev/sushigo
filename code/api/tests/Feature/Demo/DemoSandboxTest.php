@@ -55,13 +55,27 @@ class DemoSandboxTest extends TestCase
             ->assertJsonPath('message', DemoSandbox::BLOCKED_MESSAGE);
     }
 
+    /**
+     * @return array<string, array{0: string, 1: string}>
+     */
+    public static function blockedAuthenticatedRoutes(): array
+    {
+        return [
+            'avatar attachment' => ['patch', '/api/v1/auth/me/avatar'],
+            'media upload' => ['post', '/api/v1/media/upload'],
+            'media asset update' => ['patch', '/api/v1/media/assets/1'],
+            'media asset delete' => ['delete', '/api/v1/media/assets/1'],
+        ];
+    }
+
     #[Test]
-    public function demo_blocks_avatar_upload_for_signed_in_users(): void
+    #[DataProvider('blockedAuthenticatedRoutes')]
+    public function demo_blocks_media_mutations_for_signed_in_users(string $method, string $uri): void
     {
         $this->enterDemo();
         Passport::actingAs(User::factory()->create());
 
-        $this->patchJson('/api/v1/auth/me/avatar', [])
+        $this->json($method, $uri, [])
             ->assertForbidden()
             ->assertJsonPath('message', DemoSandbox::BLOCKED_MESSAGE);
     }
