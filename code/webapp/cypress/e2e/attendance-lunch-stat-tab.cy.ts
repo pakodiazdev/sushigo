@@ -7,12 +7,18 @@
  *
  * Test date: 2026-04-09 (Thursday, a work day for all seeded employees)
  *
- * Employees used (seeded by AttendanceLunchStatTabSeeder):
+ * Employees used — AttendanceTestSeeder creates all 10 (EMP-001..EMP-008 plus
+ * ADM-001/ADM-002), then AttendanceLunchStatTabSeeder adds attendance records
+ * on top of a subset:
  *   EMP-001  Mendoza, Carlos   → no attendance record (pending)          — bucket: pending
  *   EMP-002  García, María     → checked in, no lunch                    — bucket: checkedIn
  *   EMP-003  López, Pedro      → checked in, at lunch (no lunch_end)     — bucket: atLunch
  *   EMP-004  Ramírez, Ana      → checked in, lunch done ("returned")     — bucket: checkedIn
  *   EMP-005  Sánchez, Roberto  → checked out                             — bucket: done
+ *   EMP-006, EMP-007, EMP-008, ADM-001, ADM-002 → no attendance record (pending, same as Mendoza)
+ *
+ * Because "Total" renders all 10 cards, it overflows the viewport — see the
+ * scrollIntoView() calls in that test.
  *
  * Since EMP-001 is pending, the page is expected to land on the "Pendientes"
  * tab by default.
@@ -26,13 +32,6 @@ import users from "../fixtures/users.json";
 const { email: adminEmail, password: adminPassword } = users.admin;
 
 // ── Suite setup ──────────────────────────────────────────────────────────────
-
-// ⚠️ QUARANTINED per #490 → see #539. Fails against a fresh stack:
-// "'En comida' as a tab" test fails: employee name <p> "not visible because clipped by a parent element" (overflow/scroll).
-// Remove this guard when #539 is fixed.
-before(function () {
-  this.skip()
-})
 
 before(() => {
   cy.task("test:reset", "attendance-lunch-stat-tab", { timeout: 60_000 });
@@ -110,11 +109,24 @@ describe("'En comida' as a tab", () => {
   it("clicking 'Total empleados' shows literally everyone, including López", () => {
     clickTab("total");
 
-    cy.contains("Mendoza", { timeout: 10_000 }).should("be.visible");
-    cy.contains("García").should("be.visible");
-    cy.contains("López").should("be.visible");
-    cy.contains("Ramírez").should("be.visible");
-    cy.contains("Sánchez").should("be.visible");
+    // "Total" renders all 10 employees AttendanceTestSeeder creates (this
+    // spec's seeder only adds attendance records on top of them — see the
+    // file header), which overflows the 720px viewport and pushes later cards
+    // below the fold inside the scrollable `<main>` panel. scrollIntoView() is
+    // required before each visibility check, same as
+    // attendance-absent-stat-card.cy.ts (#535).
+    cy.contains("Mendoza", { timeout: 10_000 }).scrollIntoView().should("be.visible");
+    cy.contains("García").scrollIntoView().should("be.visible");
+    cy.contains("López").scrollIntoView().should("be.visible");
+    cy.contains("Ramírez").scrollIntoView().should("be.visible");
+    cy.contains("Sánchez").scrollIntoView().should("be.visible");
+    // The remaining 5 employees this spec's seeder never touches — asserted
+    // too so the test exercises the full 10-card grid it's named for.
+    cy.contains("Torres").scrollIntoView().should("be.visible");
+    cy.contains("Flores").scrollIntoView().should("be.visible");
+    cy.contains("Vargas").scrollIntoView().should("be.visible");
+    cy.contains("User, Admin").scrollIntoView().should("be.visible");
+    cy.contains("Manager, Inventory").scrollIntoView().should("be.visible");
   });
 });
 
