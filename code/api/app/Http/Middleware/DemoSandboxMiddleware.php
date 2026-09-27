@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use App\Support\Demo\DemoSandbox;
 use Closure;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Symfony\Component\HttpFoundation\Response;
@@ -20,10 +21,13 @@ class DemoSandboxMiddleware
 
     public function handle(Request $request, Closure $next): Response
     {
-        if (! DemoSandbox::isActive()) {
-            return $next($request);
-        }
+        $rejection = DemoSandbox::isActive() ? $this->rejection($request) : null;
 
+        return $rejection ?? $next($request);
+    }
+
+    private function rejection(Request $request): ?JsonResponse
+    {
         $routeName = $request->route()?->getName();
 
         if (in_array($routeName, DemoSandbox::BLOCKED_ROUTES, true)) {
@@ -31,9 +35,14 @@ class DemoSandboxMiddleware
         }
 
         if (in_array($routeName, DemoSandbox::UNTHROTTLED_ROUTES, true)) {
-            return $next($request);
+            return null;
         }
 
+        return $this->throttle($request, $routeName);
+    }
+
+    private function throttle(Request $request, ?string $routeName): ?JsonResponse
+    {
         [$bucket, $limit] = $routeName === 'auth.login'
             ? ['demo-auth', (int) config('demo.rate_limits.auth_per_minute')]
             : ['demo-api', (int) config('demo.rate_limits.api_per_minute')];
@@ -50,6 +59,6 @@ class DemoSandboxMiddleware
 
         RateLimiter::hit($key, self::DECAY_SECONDS);
 
-        return $next($request);
+        return null;
     }
 }

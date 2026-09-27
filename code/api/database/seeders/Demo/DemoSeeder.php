@@ -2,6 +2,7 @@
 
 namespace Database\Seeders\Demo;
 
+use App\Exceptions\SeederPrerequisiteMissingException;
 use Database\Seeders\BankAccountSeeder;
 use Database\Seeders\BranchSeeder;
 use Database\Seeders\CashRegisterSeeder;
@@ -33,7 +34,6 @@ use Database\Seeders\PunctualityRangeSeeder;
 use Database\Seeders\UnitOfMeasureSeeder;
 use Database\Seeders\UomConversionSeeder;
 use Illuminate\Database\Seeder;
-use RuntimeException;
 
 /**
  * Canonical, deterministic dataset for the public Demo environment (#635).
@@ -117,7 +117,7 @@ class DemoSeeder extends Seeder
      * Also called by `demo:reset` before it touches any table, so a missing
      * secret fails fast instead of after the current dataset is gone.
      *
-     * @throws RuntimeException
+     * @throws SeederPrerequisiteMissingException
      */
     public static function assertSafeToSeed(): void
     {
@@ -129,7 +129,7 @@ class DemoSeeder extends Seeder
 
         foreach (self::FALLBACK_PASSWORDS as $key => [$fallback, $envVar]) {
             if (($configured[$key] ?? $fallback) === $fallback) {
-                throw new RuntimeException("{$envVar} must be set to a non-default value before seeding the public Demo.");
+                throw new SeederPrerequisiteMissingException("{$envVar} must be set to a non-default value before seeding the public Demo.");
             }
         }
     }
