@@ -202,8 +202,8 @@ Investment mix: dev-platform 12 (`#632`, `#633`, `#634`, `#636`, `#638`, `#612`,
 - Multi-tenant SaaS demo provisioning or real Production customer onboarding (`#635`).
 - Upgrading Laravel or unrelated Composer dependencies as part of the PHP contract work (`#638`).
 - Any Inventory behavior/state-handling change alongside the `#624` copy-only translation pass.
-- The remaining quarantined specs outside this sprint's five (`#538`–`#540`, `#543`, `#551`,
-  `#556`, `#558`, `#561`) and unrelated deferred debt (`#85`, `#276`, `#450`).
+- The remaining quarantined specs outside this sprint's five (`#538`–`#540`, `#551`,
+  `#556`, `#558`, `#561`; `#543` was later picked up as opportunistic work — see §5.4) and unrelated deferred debt (`#85`, `#276`, `#450`).
 - Phase 2 of the exact monetary value contract (`#621`, deferred from Sprint 008) — not part of
   this sprint's scope.
 
@@ -219,8 +219,7 @@ _No scope changes recorded yet — this sprint has not started._
 
 | Date | Issue | Title | Trigger | Result |
 |---|---:|---|---|---|
-
-_None yet — this sprint has not started._
+| 2026-09-27 | #543 | Fix quarantined Cypress spec: extra-day-employee-request.cy.ts | Picked up alongside the sprint's formal quarantined-spec work (`#536`, `#537`, `#541`, `#542`, `#557`) — same `#490` quarantine batch, small and conflict-free | Dev Debugger overlay no longer covers "Cancelar" (close it after the page settles) and the stale post-cancel empty-state text was updated; guard removed, full CI green — PR #667 |
 
 ## 6. Value Ranking
 
@@ -412,8 +411,9 @@ Computed once at closure from every Issue's `## 📅 Sessions` array.
 
 | Status | Issue | Result Summary | Pull Request | Merge Commit | Tracked | Evidence Notes |
 |---|---:|---|---:|---|---:|---|
+| ✅ | #543 | Opportunistic (§5.4): un-quarantined `extra-day-employee-request.cy.ts` — waits for the page to settle before closing the Dev Debugger, and asserts the current `No tienes solicitudes.` empty state (#096) | PR #667 | — | 0.2h | Cypress 1/1 × 3 local runs; full regression green (`ci-gate`, 6/6 Cypress shards, SonarCloud webapp passed); PR ready, merge pending |
 
-_Empty — this sprint has not started. Filled in as each Issue merges, mirroring
+_Filled in as each Issue merges, mirroring
 `doc/sprints/sprint-008-inventory-valuation-and-platform-hardening.md` §13._
 
 ## 14. Quality Results
