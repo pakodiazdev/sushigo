@@ -33,13 +33,6 @@ const { email: adminEmail, password: adminPassword } = users.admin;
 
 // ── Suite setup ─────────────────────────────────────────────────────────────
 
-// ⚠️ QUARANTINED per #490 → see #538. Fails against a fresh stack:
-// Happy-path test fails: employee name <p> "not visible because clipped by a parent element" (overflow/scroll).
-// Remove this guard when #538 is fixed.
-before(function () {
-  this.skip()
-})
-
 before(() => {
   cy.task("test:reset", "attendance", { timeout: 60_000 });
 });
@@ -109,48 +102,54 @@ describe("Extra Day Express — Happy Path", () => {
     clickCheckInOnRestDayEmployee("Mendoza", "Carlos");
 
     // Step 2: Verify ExtraDayNegotiationDialog is open
-    cy.get("dialog[open]").should("be.visible");
-    cy.contains("h2", "Día extra express").should("be.visible");
-    cy.contains("Mendoza, Carlos").should("be.visible");
+    // Scope to the dialog: the employee card behind it contains the same name.
+    cy.get('dialog[open][aria-labelledby="extra-day-dialog-title"]')
+      .should("be.visible")
+      .within(() => {
+        cy.contains("h2", "Día extra express").should("be.visible");
+        cy.contains("Mendoza, Carlos").should("be.visible");
 
-    // Step 3: Verify form sections are present
-    // Salary section
-    cy.contains("Salario del día").should("be.visible");
-    cy.get('input[name="salary_mode"]').should("exist");
-    // Prima section
-    cy.contains("Pago extra por trabajar en día de descanso").should("be.visible");
-    cy.get('input[name="prima_mode"]').should("exist");
+        // Step 3: Verify form sections are present
+        // Salary section
+        cy.contains("Salario del día").should("be.visible");
+        cy.get('input[name="salary_mode"]').should("exist");
+        // Prima section
+        cy.contains("Pago extra por trabajar en día de descanso").should("be.visible");
+        cy.get('input[name="prima_mode"]').should("exist");
 
-    // Step 4: Handle salary input based on current mode
-    // When no registered wage exists, salary mode defaults to 'custom'
-    // The percentage input is disabled when no wage is registered, but the amount input is enabled
-    cy.get('input[name="salary_mode"][value="custom"]').then(($radio) => {
-      if ($radio.is(":checked")) {
-        // Custom mode is active — enter a salary amount in the "Monto ($)" field
-        cy.contains("label", "Monto ($)")
-          .parent()
-          .find('input[type="number"]')
-          .clear()
-          .type("200");
-      }
-    });
+        // Step 4: Handle salary input based on current mode
+        // When no registered wage exists, salary mode defaults to 'custom'
+        // The percentage input is disabled when no wage is registered, but the amount input is enabled
+        cy.get('input[name="salary_mode"][value="custom"]').then(($radio) => {
+          if ($radio.is(":checked")) {
+            // Custom mode is active — enter a salary amount in the "Monto ($)" field
+            cy.contains("label", "Monto ($)")
+              .parent()
+              .find('input[type="number"]')
+              .clear()
+              .type("200");
+          }
+        });
 
-    // Step 5: Verify summary shows calculated values
-    cy.contains("Total estimado").should("be.visible");
+        // Step 5: Verify summary shows calculated values
+        cy.contains("Total estimado").should("be.visible");
 
-    // Step 6: Click "Aprobar y continuar"
-    cy.contains("button", "Aprobar y continuar").click();
+        // Step 6: Click "Aprobar y continuar"
+        cy.contains("button", "Aprobar y continuar").click();
+      });
 
     // Wait for extra day registration
     cy.wait("@registerExtraDay").its("response.statusCode").should("eq", 201);
 
     // Step 7: Check-in time dialog should appear
-    cy.get("#checkin-time").should("be.visible");
-    cy.contains("Registrar entrada").should("be.visible");
+    cy.get('[role="alertdialog"]').should("be.visible").within(() => {
+      cy.contains("h3", "Registrar entrada").should("be.visible");
+      cy.get("#checkin-time").should("be.visible");
 
-    // Step 8: Submit check-in time (14:30 — the test time)
-    cy.get("#checkin-time").clear({ force: true }).type("14:30", { force: true });
-    cy.contains("button", "Confirmar entrada").should("not.be.disabled").click();
+      // Step 8: Submit check-in time (14:30 — the test time)
+      cy.get("#checkin-time").clear().type("14:30");
+      cy.contains("button", "Confirmar entrada").should("not.be.disabled").click();
+    });
 
     // Wait for check-in mutation
     cy.wait("@checkIn");
