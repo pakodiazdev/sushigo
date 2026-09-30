@@ -39,8 +39,19 @@ function openEmp001Detail() {
   cy.contains('h2', 'Detalle de Empleado', { timeout: 10_000 }).should('be.visible')
 }
 
+/**
+ * Plain scrollIntoView() aligns the heading to the very top of the Employee
+ * Detail panel's scroll container — right underneath the panel's sticky
+ * "Detalle de Empleado" header, which then covers it ("not visible … being
+ * covered by another element"). It only reproduced in CI (Chrome, fresh
+ * stack), where the panel is scrollable enough to reach that position; see
+ * #558 and the same fixed-header overshoot fixed in #553. The negative top
+ * offset stops the scroll short so the heading lands below the header.
+ */
 function scrollToExtraDays() {
-  cy.contains('Días extra', { timeout: 10_000 }).scrollIntoView().should('be.visible')
+  cy.contains('h3', 'Días extra', { timeout: 10_000 })
+    .scrollIntoView({ offset: { top: -120, left: 0 } })
+    .should('be.visible')
 }
 
 function openHistory() {
@@ -49,18 +60,13 @@ function openHistory() {
   cy.contains('h3', 'Días extra')
     .parent()
     .contains('button', 'Ver historial')
-    .click()
+    // 'center' keeps Cypress's own scroll-before-click from parking the
+    // button under the panel's sticky header (same overshoot as above).
+    .click({ scrollBehavior: 'center' })
   cy.contains('Historial de días extra', { timeout: 8_000 }).should('be.visible')
 }
 
 // ── Suite setup ──────────────────────────────────────────────────────────────
-
-// ⚠️ QUARANTINED per #490 → see #558 (CI-only failure; passes locally). Fails against a fresh stack:
-// CI-only (passes locally on Electron): 1 of 5 tests fails — an <h3.flex.items-center.gap-2.text-sm.font-semibold> section heading is "not visible" after 15s — same overlay/scroll signature as #553.
-// Remove this guard when #558 is fixed.
-before(function () {
-  this.skip()
-})
 
 before(() => {
   cy.task('test:reset', 'attendance-extra-days', { timeout: 60_000 })
