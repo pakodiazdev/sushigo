@@ -55,13 +55,6 @@ function isCurrentMonth(iso: string): boolean {
 
 // ── Suite setup ──────────────────────────────────────────────────────────────
 
-// ⚠️ QUARANTINED per #490 → see #543. Fails against a fresh stack:
-// Happy-path test fails: `cy.click()` on a button "covered by another element" (overlay/toast).
-// Remove this guard when #543 is fixed.
-before(function () {
-  this.skip()
-})
-
 before(() => {
   cy.task('test:reset', 'attendance', { timeout: 60_000 })
 })
@@ -70,6 +63,12 @@ beforeEach(() => {
   cy.loginByApi(email, password)
   cy.visitWithAuth('/solicitudes')
   cy.url().should('include', '/solicitudes', { timeout: 10_000 })
+  // Wait for a stable page element before closing the dev debugger —
+  // closeDevDebugger() only acts if the overlay is already in the DOM, so
+  // calling it right after navigation can no-op when the overlay mounts
+  // slightly later, leaving it on top of the request card's "Cancelar"
+  // button for the rest of the test (#543).
+  cy.contains('button', 'Día extra', { timeout: 10_000 }).should('be.visible')
   cy.closeDevDebugger()
 })
 
@@ -138,7 +137,10 @@ describe('Extra Day Employee Self-Request — Happy Path', () => {
 
     cy.wait('@cancelRequest').its('response.statusCode').should('eq', 200)
 
-    // Step 7: Card disappears (filtered out on refetch)
-    cy.contains('No tienes solicitudes de días extra.', { timeout: 8_000 }).should('be.visible')
+    // Step 7: Card disappears (filtered out on refetch). "Mis solicitudes"
+    // lists every request type since #096, so its empty state is the generic
+    // "No tienes solicitudes." (see my-requests-list.tsx).
+    cy.contains('⏳ Día extra solicitado').should('not.exist')
+    cy.contains('No tienes solicitudes.', { timeout: 8_000 }).should('be.visible')
   })
 })
