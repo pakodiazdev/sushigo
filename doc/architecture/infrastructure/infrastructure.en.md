@@ -9,7 +9,7 @@ This document describes the deployment infrastructure, branch strategy, and CI/C
 > [`doc/conventions/ci/deployment.md`](../../conventions/ci/deployment.md) for the current detail.**
 > "Preview: manual, from a feature branch, after PR review" and "Production: automatic, on merge to
 > `main`" are still accurate under TD-07 — that part was never superseded. What's missing here: a
-> third environment (**Demo**, also automatic on `main`, not listed at all); the fact that
+> the full detail of the third environment (**Demo**, also automatic on `main` — now listed in §2, #635); the fact that
 > Production and Demo build and deploy **two different Docker images** from the same commit (a
 > hardened `prod` target with devdebug/demo-login code physically excluded, vs. a convenience
 > `preview` target that includes it, used by both Preview/QA and Demo); and the release-identity,
@@ -24,6 +24,7 @@ This document describes the deployment infrastructure, branch strategy, and CI/C
 | Environment | URL | Source branch | Deploy trigger |
 |-------------|-----|--------------|---------------|
 | **Preview** | `preview.sushigo-romita.com` | `feature/*` | Manual — from feature branch after PR review passes |
+| **Demo** | `demo.sushigo-romita.com` | `main` | Automatic — `deploy-demo` after `ci-gate` + `release-build-preview` on `main`, own GCP project (`sushigo-demo`), resettable synthetic data (#635, see [`deployment.md`](../../conventions/ci/deployment.md) → "Demo") |
 | **Production** | `admin.sushigo-romita.com` | `main` | Automatic — after full CI pipeline passes on merge to `main` |
 
 ---

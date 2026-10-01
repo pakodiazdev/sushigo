@@ -1,0 +1,191 @@
+name: demo-ops
+
+# Operator actions for the public Demo environment (#635 — doc/conventions/ci/deployment.md → "Demo").
+#
+#   reset             Restore the canonical demo dataset (`php artisan demo:reset`). Also runs on a
+#                     schedule. Uses the code at Demo's watermark so seeders match the deployed schema.
+#                     `sha` is only accepted to bootstrap a Demo that has never been promoted.
+#   resume            Remove the pause marker a failed promotion (or a rollback) left behind, after
+#                     re-verifying the watermark still descends into current main.
+#   advance-watermark Move the watermark forward to `sha` after a destructive migration was applied
+#                     through a planned maintenance procedure (the automated pipeline refuses those).
+#   status            Print the watermark, pause marker and current traffic split.
+#
+# Shares `demo-promotion-<repo>` with _deploy-demo.yml, so no operator action ever interleaves with
+# an in-flight promotion. Seeding only ever happens here — explicitly or on this schedule — never as
+# part of a deploy (TD-07 "Migration ownership").
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "Operation to run"
+        required: true
+        type: choice
+        options: [status, reset, resume, advance-watermark]
+      sha:
+        description: "advance-watermark: target commit · reset: bootstrap commit (only when Demo has no watermark yet)"
+        required: false
+        type: string
+  schedule:
+    # Nightly reset, 09:00 UTC (03:00 in Mexico City) — visitors' changes don't accumulate.
+    - cron: '0 9 * * *'
+
+concurrency:
+  group: demo-promotion-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  ops:
+    name: demo-ops (${{ inputs.action || 'reset' }})
+    # Schedules fire on every fork/clone of the repo too — only run where Demo is enabled.
+    if: vars.DEMO_DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    environment: demo
+    permissions:
+      id-token: write
+      contents: read
+    env:
+      ACTION: ${{ inputs.action || 'reset' }}
+      INPUT_SHA: ${{ inputs.sha }}
+      GCP_REGION: ${{ vars.DEMO_GCP_REGION }}
+      SERVICE: ${{ vars.DEMO_CLOUD_RUN_SERVICE }}
+      STATE_BUCKET: ${{ vars.DEMO_STATE_BUCKET }}
+    steps:
+      - name: Checkout main (full history)
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Auth to Google Cloud (Demo deploy identity, WIF)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.DEMO_WIF_PROVIDER }}
+          service_account: ${{ vars.DEMO_DEPLOY_SERVICE_ACCOUNT }}
+
+      - name: Setup gcloud
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ vars.DEMO_GCP_PROJECT_ID }}
+
+      - name: Read Demo state
+        id: state
+        run: |
+          set -euo pipefail
+          WATERMARK="$(gcloud storage cat "gs://${STATE_BUCKET}/watermark" 2>/dev/null | tr -d '[:space:]' || true)"
+          GENERATION="$(gcloud storage objects describe "gs://${STATE_BUCKET}/watermark" --format='value(generation)' 2>/dev/null || echo 0)"
+          PAUSED="$(gcloud storage cat "gs://${STATE_BUCKET}/paused" 2>/dev/null | head -1 || true)"
+          {
+            echo "watermark=${WATERMARK}"
+            echo "generation=${GENERATION:-0}"
+            echo "paused=${PAUSED}"
+          } >> "$GITHUB_OUTPUT"
+          {
+            echo "### 🎭 Demo state"
+            echo ""
+            echo "- **Watermark**: \`${WATERMARK:-none}\`"
+            echo "- **Paused**: ${PAUSED:-no}"
+            echo "- **Traffic**:"
+            echo '```'
+            gcloud run services describe "$SERVICE" --region "$GCP_REGION" \
+              --format='table(status.traffic.revisionName,status.traffic.percent,status.traffic.tag)' 2>/dev/null || echo "service not created yet"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Resolve reset commit
+        id: reset_ref
+        if: env.ACTION == 'reset'
+        env:
+          WATERMARK: ${{ steps.state.outputs.watermark }}
+        run: |
+          set -euo pipefail
+          if [ -n "$WATERMARK" ]; then
+            if [ -n "$INPUT_SHA" ] && [ "$(git rev-parse "$INPUT_SHA")" != "$WATERMARK" ]; then
+              echo "::error::Demo already has a watermark (${WATERMARK}); reset always uses it — the sha input is only for bootstrapping"
+              exit 1
+            fi
+            echo "sha=${WATERMARK}" >> "$GITHUB_OUTPUT"
+          elif [ -n "$INPUT_SHA" ]; then
+            SHA="$(git rev-parse "${INPUT_SHA}^{commit}")"
+            git merge-base --is-ancestor "$SHA" origin/main || { echo "::error::${SHA} is not on main"; exit 1; }
+            echo "sha=${SHA}" >> "$GITHUB_OUTPUT"
+          else
+            echo "::error::Demo has never been promoted — pass the bootstrap commit as 'sha'"
+            exit 1
+          fi
+
+      - name: Checkout the code Demo is running
+        if: env.ACTION == 'reset'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.reset_ref.outputs.sha }}
+          path: deployed
+
+      - name: Setup PHP 8.5
+        if: env.ACTION == 'reset'
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          coverage: none
+
+      # `migrate --force` is a no-op once the watermark release is deployed (the promotion already
+      # migrated to it); it only does work when bootstrapping an empty Demo database.
+      - name: Restore the canonical demo dataset
+        if: env.ACTION == 'reset'
+        working-directory: deployed/code/api
+        env:
+          APP_ENV: demo
+          APP_KEY: ${{ secrets.APP_KEY }}
+          APP_URL: ${{ vars.DEMO_APP_URL }}
+          DB_CONNECTION: pgsql
+          DB_HOST: ${{ secrets.DB_HOST }}
+          DB_PORT: ${{ vars.DEMO_DB_PORT || '5432' }}
+          DB_DATABASE: ${{ secrets.DB_DATABASE }}
+          DB_USERNAME: ${{ secrets.DB_USERNAME }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          MAIL_MAILER: log
+          # Must match the value _deploy-demo.yml gives the API revision and its smoke login.
+          DEMO_ACCOUNT_EMAIL: ${{ vars.DEMO_ACCOUNT_EMAIL || 'demo@sushigo.com' }}
+          SEEDER_ADMIN_PASSWORD: ${{ secrets.SEEDER_ADMIN_PASSWORD }}
+          SEEDER_EMPLOYEE_PASSWORD: ${{ secrets.SEEDER_EMPLOYEE_PASSWORD }}
+          SEEDER_INVENTORY_PASSWORD: ${{ secrets.SEEDER_INVENTORY_PASSWORD }}
+          SEEDER_DEMO_PASSWORD: ${{ secrets.SEEDER_DEMO_PASSWORD }}
+        run: |
+          set -euo pipefail
+          composer install --prefer-dist --no-interaction --no-progress --no-scripts --no-dev
+          cp .env.example .env
+          php artisan migrate --force
+          php artisan demo:reset
+          echo "- ✅ Canonical demo dataset restored at \`${{ steps.reset_ref.outputs.sha }}\`" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Resume the promotion queue
+        if: env.ACTION == 'resume'
+        env:
+          WATERMARK: ${{ steps.state.outputs.watermark }}
+        run: |
+          set -euo pipefail
+          if [ -n "$WATERMARK" ] && ! git merge-base --is-ancestor "$WATERMARK" origin/main; then
+            echo "::error::Watermark ${WATERMARK} is not an ancestor of main — fix it with advance-watermark before resuming"
+            exit 1
+          fi
+          gcloud storage rm "gs://${STATE_BUCKET}/paused" 2>/dev/null || echo "Queue was not paused"
+          echo "- ▶️ Promotion queue resumed — the next green main commit promotes (watermark \`${WATERMARK:-none}\`)" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Advance the watermark
+        if: env.ACTION == 'advance-watermark'
+        env:
+          WATERMARK: ${{ steps.state.outputs.watermark }}
+          GENERATION: ${{ steps.state.outputs.generation }}
+        run: |
+          set -euo pipefail
+          [ -n "$INPUT_SHA" ] || { echo "::error::advance-watermark needs the target 'sha'"; exit 1; }
+          TARGET="$(git rev-parse "${INPUT_SHA}^{commit}")"
+          git merge-base --is-ancestor "$TARGET" origin/main || { echo "::error::${TARGET} is not on main"; exit 1; }
+          if [ -n "$WATERMARK" ] && ! git merge-base --is-ancestor "$WATERMARK" "$TARGET"; then
+            echo "::error::${TARGET} does not descend from the current watermark ${WATERMARK} — the watermark never moves backward"
+            exit 1
+          fi
+          echo "$TARGET" > /tmp/watermark
+          gcloud storage cp /tmp/watermark "gs://${STATE_BUCKET}/watermark" --if-generation-match="${GENERATION}"
+          echo "- ⏩ Watermark advanced \`${WATERMARK:-none}\` → \`${TARGET}\`" >> "$GITHUB_STEP_SUMMARY"
