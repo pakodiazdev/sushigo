@@ -1,0 +1,531 @@
+name: Deploy Production
+
+# Automated Production release (#636, per TD-07 — doc/decisions/td-07-environment-release-
+# promotion-contract.md; operational reference and runbook: doc/conventions/ci/deployment.md →
+# "Production pipeline"). Independent of QA (deploy-preview.yml) and Demo (#635): it never waits on,
+# reads, or feeds either of them.
+#
+# Trigger: every completed CI run for a push to `main`. CI's own `ci-gate` must have passed and its
+# `release-build-prod-cloudrun` job (#633) must have published the hardened `prod-cloudrun` image —
+# this workflow downloads that run's `release-prod-cloudrun` manifest artifact and deploys exactly
+# that digest. It never builds, never re-resolves the mutable `release-<sha>` tag, and never falls
+# back to the `preview` image. `workflow_dispatch` re-attempts a specific green CI run (same guards).
+#
+#   preflight ── resolve the CI run + commit, validate the release manifest, run the promotion
+#                guard (quiesce + strict-descendant-of-watermark), and the destructive-migration
+#                guard (block mode) over every migration between the watermark and this commit.
+#   release ──── environment `production` — the initial-adoption approval gate (required reviewers
+#                are configured on the GitHub Environment, not here). After approval everything is
+#                automatic and runs as ONE job so nothing else can interleave:
+#                guard re-check → one-shot migration Cloud Run Job → `--no-traffic` candidate
+#                revision → /api/v1/health/ready → smoke test against the candidate URL → guard
+#                re-check → 100% traffic shift → post-promotion readiness → advance the watermark.
+#                On failure after the migration started, traffic is kept on (or restored to) the
+#                previous revision and Production's promotion queue is quiesced.
+#
+# ── Anti-rollback guards (TD-07) ────────────────────────────────────────────────────────────────
+# 1. Workflow-level concurrency `production-release-<repo>`, cancel-in-progress: false — the whole
+#    chain (migration included) never runs twice at once. Note GitHub keeps only ONE pending run per
+#    group: a newer pending run replaces an older pending one. For Production that is the desired
+#    outcome — the newer `main` commit contains the older one — and the guard below would reject the
+#    older one afterwards anyway.
+# 2. .github/scripts/production-release/guard.js — the commit must be on main and a STRICT descendant
+#    of tag `deploy/production/watermark`, and tag `deploy/production/quiesced` must not exist.
+#    Checked in preflight, after the approval wait, and immediately before the traffic shift. The
+#    watermark only moves forward, after a successful promotion; a rollback never moves it back.
+#
+# ── Kill switch / bootstrap ─────────────────────────────────────────────────────────────────────
+# Nothing runs until the repository variable PRODUCTION_DEPLOY_ENABLED is `true` — the GCP project
+# `sushigo-prod`, its identities, secrets and the `production` GitHub Environment must exist first
+# (scripts/gcp/provision-production.sh + the runbook in deployment.md). With no watermark yet, the
+# first release is a bootstrap: the destructive-migration scan is skipped (empty database, no
+# previous revision to break) and Cloud Run cannot create a service with --no-traffic, so the first
+# revision serves as soon as it is created — still gated by approval, readiness and smoke checks.
+#
+# ── Configuration ───────────────────────────────────────────────────────────────────────────────
+# Fixed by TD-07 and therefore hardcoded below: project `sushigo-prod`, service `sushigo-prod`,
+# deploy SA `gha-sushigo-prod@…`, runtime SA `sushigo-prod-runtime@…`, domain
+# `admin.sushigo-romita.com`, Secret Manager names `PROD_*`. Hardcoding (instead of reusing the
+# repo-level GCP_PROJECT_ID/GCP_PROJECT_NUMBER that point at sushigo-app) makes it impossible for a
+# missing Production-scoped variable to silently fall back to QA's project.
+# Repository vars:  PRODUCTION_DEPLOY_ENABLED, PROD_GCP_PROJECT_NUMBER, PROD_GCP_REGION,
+#                   PROD_DB_PORT (optional, default 5432), IMAGE_NAME_PROD (already used by ci.yml)
+# `production` Environment:  required reviewers (approval gate); var SMOKE_TEST_EMAIL; secret
+#                   SMOKE_TEST_PASSWORD (an existing Production user — never the seeded default).
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      ci_run_id:
+        description: "ID of a successful CI run on main whose prod-cloudrun release to deploy"
+        required: true
+      allow_destructive_migrations:
+        description: "Run unacknowledged destructive migrations anyway (planned maintenance only)"
+        type: boolean
+        default: false
+      seed_reference_data:
+        description: "Also run the idempotent ProductionSeeder (roles, permissions, OAuth clients, base users) after migrating — bootstrap only"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-release-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  preflight:
+    name: preflight
+    if: >-
+      vars.PRODUCTION_DEPLOY_ENABLED == 'true' &&
+      (
+        github.event_name == 'workflow_dispatch' ||
+        (
+          github.event.workflow_run.conclusion == 'success' &&
+          github.event.workflow_run.event == 'push' &&
+          github.event.workflow_run.head_branch == 'main' &&
+          github.event.workflow_run.head_repository.full_name == github.repository
+        )
+      )
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      run_id: ${{ steps.run.outputs.run_id }}
+      sha: ${{ steps.run.outputs.sha }}
+      image_ref: ${{ steps.manifest.outputs.image_ref }}
+      digest: ${{ steps.digest.outputs.digest }}
+      watermark: ${{ steps.guard.outputs.watermark }}
+      bootstrap: ${{ steps.guard.outputs.bootstrap }}
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Resolve the CI run and commit
+        id: run
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          WORKFLOW_RUN_ID: ${{ github.event.workflow_run.id }}
+          DISPATCH_RUN_ID: ${{ inputs.ci_run_id }}
+        run: |
+          set -euo pipefail
+          RUN_ID="${WORKFLOW_RUN_ID}"
+          if [ "${EVENT_NAME}" = "workflow_dispatch" ]; then
+            RUN_ID="${DISPATCH_RUN_ID}"
+          fi
+          if [[ ! "${RUN_ID}" =~ ^[0-9]+$ ]]; then
+            echo "::error::ci_run_id must be a numeric workflow run ID (got '${RUN_ID}')"
+            exit 1
+          fi
+          # Re-validated from the API for both triggers, so a dispatched ID can't point at a PR
+          # run, another workflow, a failed run, or a fork.
+          RUN_JSON="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}")"
+          CHECK="$(jq -r --arg repo "${GITHUB_REPOSITORY}" '
+            [ (.path == ".github/workflows/ci.yml"), (.event == "push"), (.head_branch == "main"),
+              (.conclusion == "success"), (.head_repository.full_name == $repo) ] | all' <<< "${RUN_JSON}")"
+          if [ "${CHECK}" != "true" ]; then
+            echo "::error::run ${RUN_ID} is not a successful CI run for a push to main in ${GITHUB_REPOSITORY}"
+            jq '{path, event, head_branch, conclusion, repo: .head_repository.full_name}' <<< "${RUN_JSON}"
+            exit 1
+          fi
+          SHA="$(jq -r .head_sha <<< "${RUN_JSON}")"
+          echo "run_id=${RUN_ID}" >> "$GITHUB_OUTPUT"
+          echo "sha=${SHA}" >> "$GITHUB_OUTPUT"
+          echo "CI run ${RUN_ID} → commit ${SHA}"
+
+      - name: Checkout (full history, for the ancestry and migration guards)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Download the prod-cloudrun release manifest from that CI run
+        uses: actions/download-artifact@v4
+        with:
+          name: release-prod-cloudrun
+          run-id: ${{ steps.run.outputs.run_id }}
+          github-token: ${{ github.token }}
+          path: release
+
+      - name: Validate release manifest
+        id: manifest
+        env:
+          SHA: ${{ steps.run.outputs.sha }}
+          IMAGE_NAME_PROD: ${{ vars.IMAGE_NAME_PROD }}
+        run: node .github/scripts/production-release/manifest.js release/release.json "$SHA" "$IMAGE_NAME_PROD"
+
+      - name: Expose digest
+        id: digest
+        run: echo "digest=$(jq -r .digest release/release.json)" >> "$GITHUB_OUTPUT"
+
+      - name: Promotion guard (quiesce + watermark ancestry)
+        id: guard
+        env:
+          SHA: ${{ steps.run.outputs.sha }}
+        run: node .github/scripts/production-release/guard.js "$SHA"
+
+      - name: Destructive migration guard
+        env:
+          SHA: ${{ steps.run.outputs.sha }}
+          WATERMARK: ${{ steps.guard.outputs.watermark }}
+          BOOTSTRAP: ${{ steps.guard.outputs.bootstrap }}
+          ALLOW_DESTRUCTIVE: ${{ inputs.allow_destructive_migrations == true }}
+        run: |
+          set -euo pipefail
+          if [ "${BOOTSTRAP}" = "true" ]; then
+            echo "::notice::Bootstrap release (no watermark) — empty database, no running revision to break; destructive scan skipped"
+            echo "### 🧱 Destructive migration guard — skipped (bootstrap release)" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          MODE=block
+          if [ "${ALLOW_DESTRUCTIVE}" = "true" ]; then
+            echo "::warning::allow_destructive_migrations=true — findings are reported but do not block this dispatch"
+            MODE=warn
+          fi
+          node .github/scripts/migration-guard/cli.js --mode="${MODE}" --base="${WATERMARK}" --head="${SHA}"
+
+  release:
+    name: release
+    needs: preflight
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    environment:
+      name: production
+      url: https://admin.sushigo-romita.com
+    permissions:
+      contents: write
+      id-token: write
+    outputs:
+      revision: ${{ steps.deploy.outputs.revision }}
+    env:
+      GH_TOKEN: ${{ github.token }}
+      SHA: ${{ needs.preflight.outputs.sha }}
+      IMAGE_REF: ${{ needs.preflight.outputs.image_ref }}
+      PROJECT_ID: sushigo-prod
+      SERVICE: sushigo-prod
+      MIGRATE_JOB: sushigo-prod-migrate
+      RUNTIME_SA: sushigo-prod-runtime@sushigo-prod.iam.gserviceaccount.com
+      APP_URL: https://admin.sushigo-romita.com
+      REGION: ${{ vars.PROD_GCP_REGION }}
+      DB_PORT: ${{ vars.PROD_DB_PORT || '5432' }}
+      DB_SECRETS: APP_KEY=PROD_APP_KEY:latest,DB_HOST=PROD_DB_HOST:latest,DB_DATABASE=PROD_DB_DATABASE:latest,DB_USERNAME=PROD_DB_USER:latest,DB_PASSWORD=PROD_DB_PASS:latest
+      OAUTH_SECRETS: /run/secrets/oauth_private/value.key=PROD_OAUTH_PRIVATE:latest,/run/secrets/oauth_public/value.key=PROD_OAUTH_PUBLIC:latest
+      RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+    steps:
+      - name: Checkout (full history, for the ancestry guard)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      # The approval wait can last hours: a newer release may have been promoted, or the queue
+      # quiesced by a rollback, since preflight ran.
+      - name: Re-verify promotion guard after approval
+        run: node .github/scripts/production-release/guard.js "$SHA"
+
+      - name: Validate Production configuration
+        env:
+          PROJECT_NUMBER: ${{ vars.PROD_GCP_PROJECT_NUMBER }}
+          SMOKE_TEST_EMAIL: ${{ vars.SMOKE_TEST_EMAIL }}
+          SMOKE_TEST_PASSWORD: ${{ secrets.SMOKE_TEST_PASSWORD }}
+        run: |
+          set -euo pipefail
+          [[ "${PROJECT_NUMBER}" =~ ^[0-9]+$ ]] || { echo "::error::repository var PROD_GCP_PROJECT_NUMBER is missing or not numeric"; exit 1; }
+          [[ "${REGION}" =~ ^[a-z]+-[a-z]+[0-9]+$ ]] || { echo "::error::repository var PROD_GCP_REGION is missing or malformed"; exit 1; }
+          [[ "${DB_PORT}" =~ ^[0-9]+$ ]] || { echo "::error::PROD_DB_PORT must be numeric"; exit 1; }
+          : "${SMOKE_TEST_EMAIL:?var SMOKE_TEST_EMAIL is required in the production GitHub Environment}"
+          : "${SMOKE_TEST_PASSWORD:?secret SMOKE_TEST_PASSWORD is required in the production GitHub Environment}"
+
+      - name: Auth to Google Cloud (WIF, sushigo-prod)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: projects/${{ vars.PROD_GCP_PROJECT_NUMBER }}/locations/global/workloadIdentityPools/github-pool/providers/github-provider
+          service_account: gha-sushigo-prod@sushigo-prod.iam.gserviceaccount.com
+
+      - name: Setup gcloud
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: sushigo-prod
+
+      - name: Capture the currently-serving revision(s)
+        id: previous
+        run: |
+          set -euo pipefail
+          if SVC_JSON="$(gcloud run services describe "${SERVICE}" --project "${PROJECT_ID}" --region "${REGION}" --format=json 2>/dev/null)"; then
+            TRAFFIC="$(jq -r '[.status.traffic[]? | select((.percent // 0) > 0) | "\(.revisionName)=\(.percent)"] | join(",")' <<< "${SVC_JSON}")"
+            PRIMARY="$(jq -r '[.status.traffic[]? | select((.percent // 0) > 0)] | max_by(.percent) | .revisionName // ""' <<< "${SVC_JSON}")"
+            {
+              echo "exists=true"
+              echo "traffic=${TRAFFIC}"
+              echo "revision=${PRIMARY}"
+            } >> "$GITHUB_OUTPUT"
+            echo "Currently serving: ${TRAFFIC:-<nothing>}"
+          else
+            {
+              echo "exists=false"
+              echo "traffic="
+              echo "revision="
+            } >> "$GITHUB_OUTPUT"
+            echo "Service ${SERVICE} does not exist yet — bootstrap deploy"
+          fi
+
+      # One-shot migration, never part of container startup (TD-07 "Migration ownership"). A Cloud
+      # Run Job runs the SAME image digest as the release, as the runtime SA, with the same Secret
+      # Manager bindings — so no Production database credential ever exists on the GitHub side.
+      # Seeding is never run here; see deployment.md for the explicit, manual seed command.
+      - name: Run database migration (Cloud Run Job, one-shot)
+        id: migrate
+        run: |
+          set -euo pipefail
+          gcloud run jobs deploy "${MIGRATE_JOB}" \
+            --project "${PROJECT_ID}" \
+            --region "${REGION}" \
+            --image "${IMAGE_REF}" \
+            --service-account "${RUNTIME_SA}" \
+            --command php \
+            --args artisan,migrate,--force,--no-interaction \
+            --set-env-vars "APP_ENV=production,APP_DEBUG=false,APP_URL=${APP_URL},DB_CONNECTION=pgsql,DB_PORT=${DB_PORT}" \
+            --set-secrets "${DB_SECRETS}" \
+            --tasks 1 \
+            --max-retries 0 \
+            --task-timeout 900s \
+            --labels "release-commit=${SHA:0:12}" \
+            --quiet
+          gcloud run jobs execute "${MIGRATE_JOB}" --project "${PROJECT_ID}" --region "${REGION}" --wait --quiet
+
+      # Never automatic (TD-07): only a human dispatch with seed_reference_data=true reaches this,
+      # still behind the approval gate. ProductionSeeder only creates system/reference data and every
+      # seeder in its chain is idempotent (see deployment.md "Seeding"); Demo seeders are never run.
+      # Its own Cloud Run Job keeps the SEEDER_* passwords off the migration job and off GitHub.
+      - name: Seed reference data (explicit dispatch only)
+        id: seed
+        if: github.event_name == 'workflow_dispatch' && inputs.seed_reference_data
+        run: |
+          set -euo pipefail
+          gcloud run jobs deploy "${MIGRATE_JOB%-migrate}-seed" \
+            --project "${PROJECT_ID}" \
+            --region "${REGION}" \
+            --image "${IMAGE_REF}" \
+            --service-account "${RUNTIME_SA}" \
+            --command php \
+            --args 'artisan,db:seed,--class=Database\Seeders\Production\ProductionSeeder,--force,--no-interaction' \
+            --set-env-vars "APP_ENV=production,APP_DEBUG=false,APP_URL=${APP_URL},DB_CONNECTION=pgsql,DB_PORT=${DB_PORT}" \
+            --set-secrets "${DB_SECRETS},SEEDER_ADMIN_PASSWORD=PROD_SEEDER_ADMIN_PASSWORD:latest,SEEDER_EMPLOYEE_PASSWORD=PROD_SEEDER_EMPLOYEE_PASSWORD:latest,SEEDER_INVENTORY_PASSWORD=PROD_SEEDER_INVENTORY_PASSWORD:latest" \
+            --tasks 1 \
+            --max-retries 0 \
+            --task-timeout 900s \
+            --labels "release-commit=${SHA:0:12}" \
+            --quiet
+          gcloud run jobs execute "${MIGRATE_JOB%-migrate}-seed" --project "${PROJECT_ID}" --region "${REGION}" --wait --quiet
+
+      - name: Deploy candidate revision (no traffic)
+        id: deploy
+        env:
+          SERVICE_EXISTS: ${{ steps.previous.outputs.exists }}
+        run: |
+          set -euo pipefail
+          TRAFFIC_FLAG=(--no-traffic)
+          if [ "${SERVICE_EXISTS}" != "true" ]; then
+            # Cloud Run rejects --no-traffic when creating a service (see the header's bootstrap note).
+            TRAFFIC_FLAG=()
+          fi
+          gcloud run deploy "${SERVICE}" \
+            --project "${PROJECT_ID}" \
+            --region "${REGION}" \
+            --platform managed \
+            --image "${IMAGE_REF}" \
+            --service-account "${RUNTIME_SA}" \
+            --allow-unauthenticated \
+            --update-env-vars "APP_ENV=production,APP_DEBUG=false,APP_URL=${APP_URL},DB_CONNECTION=pgsql,DB_PORT=${DB_PORT}" \
+            --update-secrets "${DB_SECRETS},${OAUTH_SECRETS}" \
+            --update-labels "release-commit=${SHA:0:12}" \
+            --tag candidate \
+            "${TRAFFIC_FLAG[@]}" \
+            --quiet
+          SVC_JSON="$(gcloud run services describe "${SERVICE}" --project "${PROJECT_ID}" --region "${REGION}" --format=json)"
+          REVISION="$(jq -r '.status.latestCreatedRevisionName' <<< "${SVC_JSON}")"
+          CANDIDATE_URL="$(jq -r '.status.traffic[]? | select(.tag == "candidate") | .url' <<< "${SVC_JSON}")"
+          SERVICE_URL="$(jq -r '.status.url' <<< "${SVC_JSON}")"
+          if [ -z "${CANDIDATE_URL}" ] || [ "${CANDIDATE_URL}" = "null" ]; then
+            echo "::error::no URL for the candidate tag on ${REVISION}"
+            exit 1
+          fi
+          {
+            echo "revision=${REVISION}"
+            echo "candidate_url=${CANDIDATE_URL}"
+            echo "service_url=${SERVICE_URL}"
+          } >> "$GITHUB_OUTPUT"
+          echo "Candidate ${REVISION} at ${CANDIDATE_URL}"
+
+      - name: Readiness gate on the candidate (/api/v1/health/ready)
+        id: readiness
+        env:
+          CANDIDATE_URL: ${{ steps.deploy.outputs.candidate_url }}
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 30); do
+            CODE="$(curl -s --max-time 10 -o /tmp/ready.json -w '%{http_code}' "${CANDIDATE_URL}/api/v1/health/ready" || echo "000")"
+            if [ "${CODE}" = "200" ]; then
+              echo "✅ Candidate ready on attempt ${i}"
+              exit 0
+            fi
+            echo "  attempt ${i}: HTTP ${CODE}, retrying in 5s..."
+            sleep 5
+          done
+          echo "::error::candidate revision never became ready"
+          cat /tmp/ready.json 2>/dev/null || true
+          exit 1
+
+      - name: Smoke test against the candidate
+        id: smoke
+        env:
+          BASE_URL: ${{ steps.deploy.outputs.candidate_url }}
+          HEALTH_PATH: /health/ready
+          SMOKE_TEST_EMAIL: ${{ vars.SMOKE_TEST_EMAIL }}
+          SMOKE_TEST_PASSWORD: ${{ secrets.SMOKE_TEST_PASSWORD }}
+        run: bash .github/scripts/deploy-smoke-test.sh
+
+      - name: Re-verify promotion guard immediately before the traffic shift
+        run: node .github/scripts/production-release/guard.js "$SHA"
+
+      - name: Promote candidate to 100% traffic
+        id: promote
+        env:
+          REVISION: ${{ steps.deploy.outputs.revision }}
+        run: |
+          set -euo pipefail
+          # Explicit revision name, not the `candidate` tag, so exactly the revision that passed the
+          # checks above is promoted.
+          gcloud run services update-traffic "${SERVICE}" \
+            --project "${PROJECT_ID}" --region "${REGION}" \
+            --to-revisions "${REVISION}=100" --quiet
+
+      - name: Post-promotion readiness
+        env:
+          SERVICE_URL: ${{ steps.deploy.outputs.service_url }}
+          REVISION: ${{ steps.deploy.outputs.revision }}
+        run: |
+          set -euo pipefail
+          SERVING="$(gcloud run services describe "${SERVICE}" --project "${PROJECT_ID}" --region "${REGION}" --format=json \
+            | jq -r '[.status.traffic[]? | select((.percent // 0) == 100) | .revisionName] | first // ""')"
+          if [ "${SERVING}" != "${REVISION}" ]; then
+            echo "::error::expected ${REVISION} to serve 100% of traffic, found '${SERVING}'"
+            exit 1
+          fi
+          for i in $(seq 1 12); do
+            CODE="$(curl -s --max-time 10 -o /dev/null -w '%{http_code}' "${SERVICE_URL}/api/v1/health/ready" || echo "000")"
+            if [ "${CODE}" = "200" ]; then
+              echo "✅ ${SERVICE_URL} ready after promotion"
+              exit 0
+            fi
+            echo "  attempt ${i}: HTTP ${CODE}, retrying in 5s..."
+            sleep 5
+          done
+          echo "::error::Production is not ready after the traffic shift"
+          exit 1
+
+      # Tags the revision that was serving before this release as `previous`, so
+      # production-rollback.yml can restore exactly the last PROMOTED revision — not merely the
+      # newest older revision, which could be a candidate that failed its checks and never served.
+      - name: Tag the replaced revision as rollback target
+        if: steps.previous.outputs.revision != ''
+        continue-on-error: true
+        env:
+          PREVIOUS_REVISION: ${{ steps.previous.outputs.revision }}
+        run: |
+          set -euo pipefail
+          gcloud run services update-traffic "${SERVICE}" \
+            --project "${PROJECT_ID}" --region "${REGION}" \
+            --update-tags "previous=${PREVIOUS_REVISION}" --quiet
+
+      - name: Advance the Production watermark
+        id: watermark
+        run: bash .github/scripts/production-release/tag.sh set deploy/production/watermark "$SHA" "Promoted to Production by ${RUN_URL}"
+
+      # ── Failure handling ───────────────────────────────────────────────────────────────────────
+      - name: Restore traffic to the previous revision
+        id: restore
+        if: >-
+          failure() &&
+          (steps.promote.outcome == 'success' || steps.promote.outcome == 'failure') &&
+          steps.previous.outputs.traffic != ''
+        env:
+          PREVIOUS_TRAFFIC: ${{ steps.previous.outputs.traffic }}
+        run: |
+          set -euo pipefail
+          gcloud run services update-traffic "${SERVICE}" \
+            --project "${PROJECT_ID}" --region "${REGION}" \
+            --to-revisions "${PREVIOUS_TRAFFIC}" --quiet
+          echo "::warning::Traffic restored to ${PREVIOUS_TRAFFIC}"
+
+      - name: Quiesce Production's promotion queue
+        id: quiesce
+        if: >-
+          failure() &&
+          (steps.migrate.outcome == 'success' || steps.migrate.outcome == 'failure')
+        run: |
+          set -euo pipefail
+          bash .github/scripts/production-release/tag.sh set deploy/production/quiesced "$SHA" \
+            "Production release of ${SHA} failed after migration started (${RUN_URL}). Investigate, then resume via production-rollback.yml."
+          echo "::error::Production promotion queue quiesced — resume with the 'Production rollback / resume' workflow once resolved"
+
+      - name: Release metadata
+        if: always()
+        env:
+          RUN_ID_CI: ${{ needs.preflight.outputs.run_id }}
+          DIGEST: ${{ needs.preflight.outputs.digest }}
+          WATERMARK_BEFORE: ${{ needs.preflight.outputs.watermark }}
+          PREVIOUS_TRAFFIC: ${{ steps.previous.outputs.traffic }}
+          REVISION: ${{ steps.deploy.outputs.revision }}
+          MIGRATION: ${{ steps.migrate.outcome }}
+          SEED: ${{ steps.seed.outcome }}
+          READINESS: ${{ steps.readiness.outcome }}
+          SMOKE: ${{ steps.smoke.outcome }}
+          PROMOTION: ${{ steps.promote.outcome }}
+          WATERMARK_STEP: ${{ steps.watermark.outcome }}
+          RESTORE: ${{ steps.restore.outcome }}
+          QUIESCE: ${{ steps.quiesce.outcome }}
+          JOB_STATUS: ${{ job.status }}
+        run: |
+          jq -n \
+            --arg commit "${SHA}" --arg ci_run_id "${RUN_ID_CI}" --arg image "${IMAGE_REF}" --arg digest "${DIGEST}" \
+            --arg migration "${MIGRATION:-not-run}" --arg seed "${SEED:-not-run}" --arg revision "${REVISION}" --arg previous "${PREVIOUS_TRAFFIC}" \
+            --arg readiness "${READINESS:-not-run}" --arg smoke "${SMOKE:-not-run}" --arg promotion "${PROMOTION:-not-run}" \
+            --arg watermark_before "${WATERMARK_BEFORE}" --arg watermark_advanced "${WATERMARK_STEP:-not-run}" \
+            --arg traffic_restored "${RESTORE:-not-run}" --arg quiesced "${QUIESCE:-not-run}" \
+            --arg status "${JOB_STATUS}" --arg run "${RUN_URL}" \
+            '{commit: $commit, ci_run_id: $ci_run_id, image: $image, digest: $digest, migration: $migration,
+              seed: $seed, revision: $revision, previous_traffic: $previous, readiness: $readiness, smoke: $smoke,
+              promotion: $promotion, watermark_before: $watermark_before, watermark_advanced: $watermark_advanced,
+              traffic_restored: $traffic_restored, quiesced: $quiesced, status: $status, run: $run}' \
+            > production-release.json
+          cat production-release.json
+          {
+            echo "### 🏭 Production release — \`${SHA:0:12}\` — ${JOB_STATUS}"
+            echo ""
+            echo "| Field | Value |"
+            echo "|---|---|"
+            jq -r 'to_entries[] | "| \(.key) | `\(.value)` |"' production-release.json
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload release metadata
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-release
+          path: production-release.json
+          retention-days: 90

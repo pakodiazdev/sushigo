@@ -326,16 +326,32 @@ unit-tested.
 ## `scripts-tests`
 
 A change under `.github/scripts/**` (and the run is not `[skip-ci]`) runs `scripts-tests` —
-`node --test` for the test-timing report helpers, the `ci-analyze` module, and the sprint-audit
-module. It is the only branch a test-timing-only change triggers (it does **not** pull in
+`node --test` for the test-timing report helpers, the `ci-analyze` module, the sprint-audit
+module, the CI badge renderer, the destructive-migration guard, and the Production release helpers
+(`production-release/` — promotion guard and release-manifest validator, #636). It is the only branch a test-timing-only change triggers (it does **not** pull in
 `api-ci` / `webapp-ci` / `e2e-ci`). This replaces `api-tests.yml`'s old `api-timing-script-tests`
 job.
 
 ---
 
+## `migration-guard` (PR-only, never gated)
+
+When a PR touches `code/api/**`, `migration-guard` scans every migration the PR adds or modifies
+(`.github/scripts/migration-guard/`) and annotates destructive operations in `up()` — dropped or
+renamed columns/tables, column type changes (`->change()`), truncation/deletes, and destructive raw
+SQL. It runs in **warn** mode and is deliberately **not** in `ci-gate`'s `needs`: a destructive
+migration can be legitimate (the contract phase of expand/contract). But Production's automated
+pipeline runs the same scanner in **block** mode (#636), so an unacknowledged finding stops the next
+Production release — this job just makes it visible at review time. Acknowledge a genuine
+contract-phase change inside the migration with `// migration-guard: allow <reason>`. See
+[`deployment.md`](./deployment.md) → "Destructive migration guard".
+
+---
+
 ## What stays independent
 
-`deploy-preview.yml`, `update-iteration-progress.yml` (badge), and `wif-smoke-test.yml` are
+`deploy-preview.yml`, `deploy-production.yml`, `production-rollback.yml`,
+`update-iteration-progress.yml` (badge), and `wif-smoke-test.yml` are
 operational workflows, not PR validation — they are **not** part of this DAG and remain
 independently runnable. See [`deployment.md`](./deployment.md) for the environment and
 release-promotion contract ([TD-07](../../decisions/td-07-environment-release-promotion-contract.md))
