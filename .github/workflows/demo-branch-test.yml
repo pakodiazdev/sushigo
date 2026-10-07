@@ -1,6 +1,6 @@
 name: demo-branch-test
 
-# TEMPORARY (#635) — DELETE BEFORE MERGE. (attempt 3)
+# TEMPORARY (#635) — DELETE BEFORE MERGE. (attempt 4)
 #
 # Exercises the real Demo promotion chain from this PR branch, before `_deploy-demo.yml` and
 # `demo-ops.yml` exist on `main` (where `deploy-demo` is `push`-to-main only and `demo-ops` cannot
