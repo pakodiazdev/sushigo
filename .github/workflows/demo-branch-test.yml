@@ -1,0 +1,91 @@
+name: demo-branch-test
+
+# TEMPORARY (#635) — DELETE BEFORE MERGE.
+#
+# Exercises the real Demo promotion chain from this PR branch, before `_deploy-demo.yml` and
+# `demo-ops.yml` exist on `main` (where `deploy-demo` is `push`-to-main only and `demo-ops` cannot
+# be dispatched yet). It reuses `_release-build.yml` and `_deploy-demo.yml` verbatim; only the
+# seeding job is inlined, because `demo-ops`' reset deliberately refuses a commit that is not on
+# `main`.
+#
+# Order differs from the documented bootstrap on purpose: seeding runs BEFORE the promotion so the
+# first promotion's smoke login finds the demo account and the whole chain can go green in one run.
+#
+# Runs only when this file itself changes (re-run it from the Actions UI to repeat). The watermark
+# it leaves in the state bucket points at a branch commit — remove `watermark` and `paused` from
+# the bucket once testing is done, so the first real promotion from `main` bootstraps cleanly.
+
+on:
+  push:
+    branches: [feature/635-public-demo-environment]
+    paths: ['.github/workflows/demo-branch-test.yml']
+
+jobs:
+  build:
+    name: build
+    permissions:
+      id-token: write
+      contents: read
+    uses: ./.github/workflows/_release-build.yml
+    with:
+      target: preview
+      image_name: ${{ vars.IMAGE_NAME_PREVIEW }}
+      login_with_devdebug: "true"
+    secrets: inherit
+
+  seed:
+    name: seed (demo)
+    runs-on: ubuntu-latest
+    environment: demo
+    concurrency:
+      group: demo-promotion-${{ github.repository }}
+      cancel-in-progress: false
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP 8.5
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          coverage: none
+
+      - name: Migrate and restore the canonical demo dataset
+        working-directory: code/api
+        env:
+          APP_ENV: demo
+          APP_KEY: ${{ secrets.APP_KEY }}
+          APP_URL: ${{ vars.APP_URL }}
+          DB_CONNECTION: pgsql
+          DB_HOST: ${{ secrets.DB_HOST }}
+          DB_PORT: ${{ vars.DB_PORT || '5432' }}
+          DB_DATABASE: ${{ secrets.DB_DATABASE }}
+          DB_USERNAME: ${{ secrets.DB_USERNAME }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          MAIL_MAILER: log
+          DEMO_ACCOUNT_EMAIL: ${{ vars.DEMO_ACCOUNT_EMAIL || 'demo@sushigo.com' }}
+          SEEDER_ADMIN_PASSWORD: ${{ secrets.SEEDER_ADMIN_PASSWORD }}
+          SEEDER_EMPLOYEE_PASSWORD: ${{ secrets.SEEDER_EMPLOYEE_PASSWORD }}
+          SEEDER_INVENTORY_PASSWORD: ${{ secrets.SEEDER_INVENTORY_PASSWORD }}
+          SEEDER_DEMO_PASSWORD: ${{ secrets.SEEDER_DEMO_PASSWORD }}
+        run: |
+          set -euo pipefail
+          composer install --prefer-dist --no-interaction --no-progress --no-scripts --no-dev
+          cp .env.example .env
+          php artisan migrate --force
+          php artisan demo:reset
+
+  promote:
+    name: promote
+    needs: [build, seed]
+    permissions:
+      id-token: write
+      contents: read
+    uses: ./.github/workflows/_deploy-demo.yml
+    with:
+      sha: ${{ github.sha }}
+      image_uri: ${{ needs.build.outputs.image_uri }}
+      digest: ${{ needs.build.outputs.digest }}
+    secrets: inherit
