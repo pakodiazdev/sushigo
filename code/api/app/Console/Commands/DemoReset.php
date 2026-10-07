@@ -61,12 +61,16 @@ class DemoReset extends Command
     /**
      * `SET LOCAL` scopes the FK-trigger bypass to the surrounding transaction,
      * so it ends with the commit or rollback instead of needing a reset.
+     *
+     * Only the connection's own schemas (its search_path) are listed: a hosted
+     * Postgres carries the provider's schemas too (Supabase's `auth`, `storage`,
+     * ...), which are neither ours to wipe nor owned by the application role.
      */
     private function truncateApplicationTables(): void
     {
         DB::statement('SET LOCAL session_replication_role = replica;');
 
-        foreach (Schema::getTableListing() as $table) {
+        foreach (Schema::getTableListing(Schema::getCurrentSchemaListing()) as $table) {
             $name = str_contains($table, '.') ? substr(strrchr($table, '.'), 1) : $table;
 
             if (! in_array($name, self::PRESERVED_TABLES, true)) {

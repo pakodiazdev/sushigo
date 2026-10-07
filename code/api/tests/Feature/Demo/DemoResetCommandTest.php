@@ -10,6 +10,7 @@ use App\Models\Stock;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
 use PHPUnit\Framework\Attributes\Test;
@@ -66,6 +67,19 @@ class DemoResetCommandTest extends TestCase
             ->assertExitCode(1);
 
         $this->assertModelExists($existing);
+    }
+
+    #[Test]
+    public function leaves_tables_outside_the_application_schema_untouched(): void
+    {
+        $this->enterDemoWithRealPasswords();
+        DB::statement('CREATE SCHEMA IF NOT EXISTS provider_owned');
+        DB::statement('CREATE TABLE provider_owned.oauth_clients (id serial primary key, name text)');
+        DB::table('provider_owned.oauth_clients')->insert(['name' => 'kept']);
+
+        $this->artisan('demo:reset')->assertExitCode(0);
+
+        $this->assertSame(1, DB::table('provider_owned.oauth_clients')->count());
     }
 
     #[Test]
