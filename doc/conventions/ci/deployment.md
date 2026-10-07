@@ -480,17 +480,17 @@ watermark change never interleaves with a promotion.
 
 | # | Step | What it guarantees |
 |---|---|---|
-| 1 | Validate configuration | Every `DEMO_*` var and `demo` secret is present. The job refuses if `DEMO_GCP_PROJECT_ID` is QA's `sushigo-app` |
-| 2 | Ancestry / pause gate | Reads `gs://$DEMO_STATE_BUCKET/watermark` and `…/paused`. **Skips** (warning, job stays green) if the queue is paused or the commit doesn't descend from the watermark. This is anti-rollback guard #2 |
+| 1 | Validate configuration | Every `demo` environment var and secret is present. The job refuses if `GCP_PROJECT_ID` is QA's `sushigo-app` |
+| 2 | Ancestry / pause gate | Reads `gs://$STATE_BUCKET/watermark` and `…/paused`. **Skips** (warning, job stays green) if the queue is paused or the commit doesn't descend from the watermark. This is anti-rollback guard #2 |
 | 3 | Destructive-migration guard | [`check-destructive-migrations.js`](../../../.github/scripts/demo-promotion/check-destructive-migrations.js) scans every migration between the watermark and the candidate. A drop, rename, column redefinition, or a required (non-null, no-default) column added to an existing table in an `up()` **fails** the run (TD-07: not a candidate). Skipped on the very first promotion (new database, no old revision serving) |
 | 4 | Migrate | `php artisan migrate --force` on the runner, `APP_ENV=demo`, before any replica of the new revision serves. **Never seeds** |
-| 5 | Deploy candidate | `gcloud run deploy --image <repo>@<digest from release-build-preview> --no-traffic --tag candidate --service-account $DEMO_RUNTIME_SERVICE_ACCOUNT`, with every Secret Manager value bound explicitly (see below) |
+| 5 | Deploy candidate | `gcloud run deploy --image <repo>@<digest from release-build-preview> --no-traffic --tag candidate --service-account $RUNTIME_SERVICE_ACCOUNT`, with every Secret Manager value bound explicitly (see below) |
 | 6 | Health + readiness | `/api/v1/health` (database) then `/api/v1/health/ready` (database, `APP_KEY`, `APP_URL`, OAuth key readability — closes TD-07's "extend the health check" item) on the **candidate tag URL** |
 | 7 | Smoke | `.github/scripts/deploy-smoke-test.sh` against the candidate, signed in as the public demo account (proves the seeded account, `demo-viewer`'s read permissions, `/employees`, `/items` and `/stock`) |
 | 8 | Re-verify gate | Re-reads the pause marker and watermark right before the traffic shift (TD-07) |
 | 9 | Shift traffic | `gcloud run services update-traffic --to-tags candidate=100` |
 | 10 | Advance watermark | Writes the promoted SHA with `--if-generation-match` (compare-and-swap on the generation read in step 8) |
-| — | On any failure after step 2 | Writes `gs://$DEMO_STATE_BUCKET/paused` (run URL and reason) and removes the `candidate` tag. **Every later run skips** until an operator resumes (TD-07: "a failed check must quiesce Demo's promotion queue") |
+| — | On any failure after step 2 | Writes `gs://$STATE_BUCKET/paused` (run URL and reason) and removes the `candidate` tag. **Every later run skips** until an operator resumes (TD-07: "a failed check must quiesce Demo's promotion queue") |
 
 **Why the watermark lives in GCS, not a git tag or a repo variable:** force-moving a git tag on every
 promotion breaks developers' `git pull` ("would clobber existing tag"). `GITHUB_TOKEN` can't write
@@ -551,7 +551,7 @@ promotion chain. TD-07's "seeding stays an explicitly-invoked step for Demo" hol
 promotion can shift traffic after you:
 
 ```bash
-echo "manual rollback by <you> — <reason>" | gcloud storage cp - "gs://${DEMO_STATE_BUCKET}/paused" --project sushigo-demo
+echo "manual rollback by <you> — <reason>" | gcloud storage cp - "gs://${STATE_BUCKET}/paused" --project sushigo-demo
 gcloud run services update-traffic sushigo-demo --to-revisions=<prior-revision>=100 --region <region> --project sushigo-demo
 # investigate/fix on main, then: demo-ops → resume
 ```
@@ -561,36 +561,48 @@ watermark stays rejected.
 
 ### Configuration (`demo` GitHub Environment)
 
-Variables are `DEMO_`-prefixed deliberately: repo-level `GCP_PROJECT_ID`/`GCP_PROJECT_NUMBER`/
-`GCP_REGION` already exist for QA, and an unset environment variable would silently fall back to them,
-i.e. deploy "Demo" into QA's project. Secrets reuse #634's names (no repo-level `DB_*`/`APP_KEY`/
-`SEEDER_*` secret exists to fall back to), scoped to `demo`.
+Variables and secrets reuse #634's unprefixed names, scoped to `demo` — each environment supplies its
+own values (see the `qa` note above). The one trap: repo-level `GCP_PROJECT_ID`/`GCP_REGION` already
+exist for QA, so one left unset in `demo` silently resolves to QA's value. Both workflows therefore
+refuse to run when `GCP_PROJECT_ID` is empty or resolves to QA's `sushigo-app`. `DEMO_DEPLOY_ENABLED`
+keeps its prefix because it is a repo-level variable, and `DEMO_ACCOUNT_EMAIL`/`SEEDER_DEMO_PASSWORD`
+are the application's own env names (`config/demo.php`), not an environment prefix.
 
 | Kind | Name | Value |
 |---|---|---|
 | repo var | `DEMO_DEPLOY_ENABLED` | `true` once provisioning is complete (kill switch for `deploy-demo` and `demo-ops`) |
-| env var | `DEMO_GCP_PROJECT_ID` | `sushigo-demo` |
-| env var | `DEMO_GCP_REGION` | Cloud Run region (e.g. `us-central1`) |
-| env var | `DEMO_CLOUD_RUN_SERVICE` | `sushigo-demo` |
-| env var | `DEMO_WIF_PROVIDER` | `projects/<demo-number>/locations/global/workloadIdentityPools/github-pool/providers/github-provider` |
-| env var | `DEMO_DEPLOY_SERVICE_ACCOUNT` | `gha-sushigo-demo@sushigo-demo.iam.gserviceaccount.com` |
-| env var | `DEMO_RUNTIME_SERVICE_ACCOUNT` | `sushigo-demo-runtime@sushigo-demo.iam.gserviceaccount.com` |
-| env var | `DEMO_STATE_BUCKET` | e.g. `sushigo-demo-promotion-state` |
-| env var | `DEMO_APP_URL` | `https://demo.sushigo-romita.com` |
-| env var | `DEMO_DB_PORT` | optional, default `5432` |
+| env var | `GCP_PROJECT_ID` | `sushigo-demo` |
+| env var | `GCP_REGION` | `us-central1` |
+| env var | `CLOUD_RUN_SERVICE` | `sushigo-demo` |
+| env var | `WIF_PROVIDER` | `projects/972206171838/locations/global/workloadIdentityPools/github-pool/providers/github-provider` |
+| env var | `DEPLOY_SERVICE_ACCOUNT` | `gha-sushigo-demo@sushigo-demo.iam.gserviceaccount.com` |
+| env var | `RUNTIME_SERVICE_ACCOUNT` | `sushigo-demo-runtime@sushigo-demo.iam.gserviceaccount.com` |
+| env var | `STATE_BUCKET` | `sushigo-demo-promotion-state` |
+| env var | `APP_URL` | `https://demo.sushigo-romita.com` |
+| env var | `DB_PORT` | optional, default `5432` |
 | env var | `DEMO_ACCOUNT_EMAIL` | optional, default `demo@sushigo.com`. Passed to the Cloud Run revision (`config/demo.php`), the smoke login and `demo-ops`' reset, so all three always agree |
 | env secret | `DB_HOST`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`, `APP_KEY` | Demo's own database and key (the migrate/reset jobs run on the runner). Same "two stores kept in sync" caveat as QA's `PREVIEW_*` note above |
 | env secret | `SEEDER_ADMIN_PASSWORD`, `SEEDER_EMPLOYEE_PASSWORD`, `SEEDER_INVENTORY_PASSWORD` | Real, non-default operator passwords (`DemoSeeder` refuses fallbacks) |
 | env secret | `SEEDER_DEMO_PASSWORD` | The public demo account's password, published next to the demo link. Also used by the smoke test |
-| Secret Manager (`sushigo-demo`) | `DEMO_APP_KEY`, `DEMO_DB_HOST`, `DEMO_DB_DATABASE`, `DEMO_DB_USER`, `DEMO_DB_PASS`, `DEMO_OAUTH_PRIVATE`, `DEMO_OAUTH_PUBLIC` | Bound onto every revision by `--set-secrets`, OAuth pair at `/run/secrets/oauth_{private,public}/value.key` |
+| Secret Manager (`sushigo-demo`) | `APP_KEY`, `DB_HOST`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`, `OAUTH_PRIVATE`, `OAUTH_PUBLIC` | Unprefixed — the project is Demo's own. Bound onto every revision by `--set-secrets`, OAuth pair at `/run/secrets/oauth_{private,public}/value.key` |
 
 ### Provisioning (one-time, operator-run; not automatable from this repo)
 
+**Status (2026-10-06):** steps 1–3 and 5 below are done — project `sushigo-demo` (number
+`972206171838`), both service accounts, their roles, the WIF pool/provider and the state bucket
+exist, and the `demo` GitHub Environment has been created. What remains is loading the values
+("Loading secrets and variables" below) and the bootstrap. The commands are kept as the record of
+what was run and as the template for Production (#636).
+
 ```bash
-# 1. Project + APIs
+# 1. Project + billing + APIs
 gcloud projects create sushigo-demo
-gcloud services enable run.googleapis.com secretmanager.googleapis.com iamcredentials.googleapis.com \
-  sts.googleapis.com storage.googleapis.com --project sushigo-demo
+# A billing account caps how many projects it can hold (5 on this one). If this fails with
+# "Cloud billing quota exceeded", unlink or delete an unused project first — Cloud Run, Secret
+# Manager and bucket creation all refuse to work on a project without billing.
+gcloud billing projects link sushigo-demo --billing-account "${BILLING_ACCOUNT_ID}"
+gcloud services enable run.googleapis.com secretmanager.googleapis.com iam.googleapis.com \
+  iamcredentials.googleapis.com sts.googleapis.com storage.googleapis.com --project sushigo-demo
 DEMO_NUMBER="$(gcloud projects describe sushigo-demo --format='value(projectNumber)')"
 
 # 2. Identities (TD-07's three, none shared with QA/Production)
@@ -617,22 +629,119 @@ gcloud iam service-accounts add-iam-policy-binding "${DEPLOY_SA}" --project sush
   --role roles/iam.workloadIdentityUser \
   --member "principalSet://iam.googleapis.com/projects/${DEMO_NUMBER}/locations/global/workloadIdentityPools/github-pool/attribute.repository/pakodiazdev/sushigo"
 
-# 4. Secrets: create each DEMO_* secret, then grant ONLY the runtime SA access to them
-for s in DEMO_APP_KEY DEMO_DB_HOST DEMO_DB_DATABASE DEMO_DB_USER DEMO_DB_PASS DEMO_OAUTH_PRIVATE DEMO_OAUTH_PUBLIC; do
-  gcloud secrets create "$s" --project sushigo-demo --replication-policy automatic   # then: versions add
+# 4. Secrets: once they exist (see "Loading secrets and variables"), grant ONLY the runtime SA access
+for s in APP_KEY DB_HOST DB_DATABASE DB_USERNAME DB_PASSWORD OAUTH_PRIVATE OAUTH_PUBLIC; do
   gcloud secrets add-iam-policy-binding "$s" --project sushigo-demo \
     --member "serviceAccount:${RUNTIME_SA}" --role roles/secretmanager.secretAccessor
 done
 
 # 5. Promotion-state bucket, writable only by the deploy SA
-gcloud storage buckets create "gs://${DEMO_STATE_BUCKET}" --project sushigo-demo --uniform-bucket-level-access
-gcloud storage buckets add-iam-policy-binding "gs://${DEMO_STATE_BUCKET}" \
+gcloud storage buckets create "gs://${STATE_BUCKET}" --project sushigo-demo --location us-central1 \
+  --uniform-bucket-level-access
+gcloud storage buckets add-iam-policy-binding "gs://${STATE_BUCKET}" \
   --member "serviceAccount:${DEPLOY_SA}" --role roles/storage.objectAdmin
 ```
 
-Then: create Demo's own database (a separate Supabase project, the same shape as QA's, never shared),
-create the `demo` GitHub Environment (no required reviewers, TD-07) with the variables and secrets
-above, and set the repo variable `DEMO_DEPLOY_ENABLED=true`.
+### Loading secrets and variables
+
+Run from a clone of this repository, with `gcloud` and `gh` both signed in. Every secret value is
+read from the keyboard without echo, so nothing lands in shell history.
+
+**Database.** Demo's database is its own Supabase project (the same shape as QA's, never shared).
+Take the connection values from Supabase's **Connect → Session pooler**:
+
+| Value | Shape | Goes into |
+|---|---|---|
+| Host | `aws-0-<region>.pooler.supabase.com` | `DB_HOST` |
+| Port | `5432` | `DB_PORT` (the default) |
+| Database | `postgres` | `DB_DATABASE` |
+| User | `postgres.<project-ref>` | `DB_USERNAME` |
+
+Do **not** use "Direct connection" (`db.<ref>.supabase.co`): it resolves over IPv6 only and GitHub
+Actions runners have no IPv6 route — the failure diagnosed for QA in #634. Do not use "Transaction
+pooler" (port `6543`) either: migrations need a full session.
+
+**Generated values.** Demo gets its own `APP_KEY` and Passport key pair, never QA's:
+
+```bash
+(cd code/api && php artisan key:generate --show)   # prints a key, does not touch .env
+openssl genrsa -out oauth-private.key 4096
+openssl rsa -in oauth-private.key -pubout -out oauth-public.key
+```
+
+Keep the key pair somewhere outside version control; it is never committed.
+
+**Environment + the five values that live in both stores.** `migrate`/`reset` run on the GitHub
+runner and need literal values (GitHub secrets); Cloud Run needs secret references (Secret Manager).
+`both` writes one typed value to the two stores so they cannot drift:
+
+```bash
+gh api -X PUT repos/pakodiazdev/sushigo/environments/demo >/dev/null   # no required reviewers (TD-07)
+
+both() {
+  printf '%s: ' "$1"; read -rs v; echo
+  printf '%s' "$v" | gcloud secrets create "$1" --project sushigo-demo --replication-policy automatic --data-file=-
+  printf '%s' "$v" | gh secret set "$1" --env demo -R pakodiazdev/sushigo
+  unset v
+}
+
+both APP_KEY        # the full value, including the base64: prefix
+both DB_HOST
+both DB_DATABASE
+both DB_USERNAME
+both DB_PASSWORD
+```
+
+The environment must exist before the first `gh secret set`, or it fails with `failed to fetch
+public key: HTTP 404`. To rotate a value later, replace `gcloud secrets create … --replication-policy
+automatic` with `gcloud secrets versions add "$1" --project sushigo-demo --data-file=-`.
+
+**Values that live in one store only:**
+
+```bash
+# OAuth key pair — Secret Manager only
+gcloud secrets create OAUTH_PRIVATE --project sushigo-demo --replication-policy automatic --data-file=oauth-private.key
+gcloud secrets create OAUTH_PUBLIC  --project sushigo-demo --replication-policy automatic --data-file=oauth-public.key
+
+# Seeder passwords — GitHub only (each command prompts for the value)
+gh secret set SEEDER_ADMIN_PASSWORD     --env demo -R pakodiazdev/sushigo
+gh secret set SEEDER_EMPLOYEE_PASSWORD  --env demo -R pakodiazdev/sushigo
+gh secret set SEEDER_INVENTORY_PASSWORD --env demo -R pakodiazdev/sushigo
+gh secret set SEEDER_DEMO_PASSWORD      --env demo -R pakodiazdev/sushigo
+```
+
+Then run provisioning step 4 above so the runtime account can read the seven Secret Manager secrets.
+
+**Variables:**
+
+```bash
+setv() { gh variable set "$1" --env demo -R pakodiazdev/sushigo --body "$2"; }
+setv GCP_PROJECT_ID          sushigo-demo
+setv GCP_REGION              us-central1
+setv CLOUD_RUN_SERVICE       sushigo-demo
+setv WIF_PROVIDER            projects/972206171838/locations/global/workloadIdentityPools/github-pool/providers/github-provider
+setv DEPLOY_SERVICE_ACCOUNT  gha-sushigo-demo@sushigo-demo.iam.gserviceaccount.com
+setv RUNTIME_SERVICE_ACCOUNT sushigo-demo-runtime@sushigo-demo.iam.gserviceaccount.com
+setv STATE_BUCKET            sushigo-demo-promotion-state
+setv APP_URL                 https://demo.sushigo-romita.com
+```
+
+**Verify** (names only — never print values):
+
+```bash
+gcloud secrets list --project sushigo-demo --format='value(name)'   # 7
+gh secret list   --env demo -R pakodiazdev/sushigo                  # 9
+gh variable list --env demo -R pakodiazdev/sushigo                  # 8 (10 with the two optional ones)
+```
+
+Only then set the repo variable: `gh variable set DEMO_DEPLOY_ENABLED --body true -R pakodiazdev/sushigo`.
+
+**Before enabling — registry cleanup policy.** Since 2026-10-06 the `gcr.io` repository in
+`sushigo-app` has a cleanup policy that keeps only the 4 most recent versions **per image**. QA's
+`preview-<sha>` builds and the `release-<sha>` builds Demo consumes share one image
+(`sushigo-api-preview`), so four manual QA deploys in a row can evict the digest Demo is serving,
+which would make that revision impossible to redeploy or roll back to. Resolve this before turning
+Demo on — a separate image for release builds, or a `Keep` rule on the `release-` tag prefix.
 
 **Bootstrap order:**
 
@@ -738,8 +847,9 @@ have a concrete starting checklist:
       account `roles/iam.serviceAccountUser` on the **runtime** account (Cloud Run's "actAs"
       requirement), or every deploy fails with a permission error.
 - [x] Create the `qa` GitHub Environment (#634) — no required reviewers, no branch restriction, per
-      TD-07. `demo`/`production` still open — create those the same way when #635/#636 land
-      (`demo`'s full variable/secret list: "Demo — implemented (#635)" → "Configuration").
+      TD-07. `demo` created the same way (#635, 2026-10-06 — its values are loaded per "Demo —
+      implemented (#635)" → "Loading secrets and variables"). `production` still open — create it
+      the same way when #636 lands.
 - [ ] Point `demo.sushigo-romita.com` and `admin.sushigo-romita.com` at their respective Cloud Run
       services (domain mapping, same mechanism already used for `preview.sushigo-romita.com`).
 - [x] Build the `sushigo-api-prod` and `sushigo-api-preview` build-and-push workflows (triggered on

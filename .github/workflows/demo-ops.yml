@@ -48,10 +48,21 @@ jobs:
     env:
       ACTION: ${{ inputs.action || 'reset' }}
       INPUT_SHA: ${{ inputs.sha }}
-      GCP_REGION: ${{ vars.DEMO_GCP_REGION }}
-      SERVICE: ${{ vars.DEMO_CLOUD_RUN_SERVICE }}
-      STATE_BUCKET: ${{ vars.DEMO_STATE_BUCKET }}
+      GCP_REGION: ${{ vars.GCP_REGION }}
+      SERVICE: ${{ vars.CLOUD_RUN_SERVICE }}
+      STATE_BUCKET: ${{ vars.STATE_BUCKET }}
     steps:
+      # Repo-level GCP_PROJECT_ID belongs to QA: unset in the `demo` environment, it resolves there.
+      - name: Refuse QA's project
+        env:
+          GCP_PROJECT: ${{ vars.GCP_PROJECT_ID }}
+        run: |
+          set -euo pipefail
+          if [ -z "$GCP_PROJECT" ] || [ "$GCP_PROJECT" = "sushigo-app" ]; then
+            echo "::error::GCP_PROJECT_ID is unset or resolved to QA's project — set it in the 'demo' GitHub Environment (TD-07)"
+            exit 1
+          fi
+
       - name: Checkout main (full history)
         uses: actions/checkout@v4
         with:
@@ -61,13 +72,13 @@ jobs:
       - name: Auth to Google Cloud (Demo deploy identity, WIF)
         uses: google-github-actions/auth@v2
         with:
-          workload_identity_provider: ${{ vars.DEMO_WIF_PROVIDER }}
-          service_account: ${{ vars.DEMO_DEPLOY_SERVICE_ACCOUNT }}
+          workload_identity_provider: ${{ vars.WIF_PROVIDER }}
+          service_account: ${{ vars.DEPLOY_SERVICE_ACCOUNT }}
 
       - name: Setup gcloud
         uses: google-github-actions/setup-gcloud@v2
         with:
-          project_id: ${{ vars.DEMO_GCP_PROJECT_ID }}
+          project_id: ${{ vars.GCP_PROJECT_ID }}
 
       - name: Read Demo state
         id: state
@@ -137,10 +148,10 @@ jobs:
         env:
           APP_ENV: demo
           APP_KEY: ${{ secrets.APP_KEY }}
-          APP_URL: ${{ vars.DEMO_APP_URL }}
+          APP_URL: ${{ vars.APP_URL }}
           DB_CONNECTION: pgsql
           DB_HOST: ${{ secrets.DB_HOST }}
-          DB_PORT: ${{ vars.DEMO_DB_PORT || '5432' }}
+          DB_PORT: ${{ vars.DB_PORT || '5432' }}
           DB_DATABASE: ${{ secrets.DB_DATABASE }}
           DB_USERNAME: ${{ secrets.DB_USERNAME }}
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
