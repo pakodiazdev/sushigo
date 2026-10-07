@@ -36,7 +36,12 @@ service accounts) is shared between environments:
 
 1. **Deploy service account** (`gha-sushigo-<env>@sushigo-<env>.iam.gserviceaccount.com`,
    WIF-authenticated, mirroring the existing `gha-sushigo-preview@sushigo-app.iam.gserviceaccount.com`
-   pattern) — triggers the deploy from CI. Does not pull the image and does not read secrets.
+   pattern) — triggers the deploy from CI. Does not pull the image and does not read secrets, but
+   **does need `roles/artifactregistry.reader` on the image's repository when that repository
+   lives in another project** (Demo's and Production's images live in `sushigo-app`): Cloud Run
+   checks that the *caller* of `gcloud run deploy` may read a cross-project image, and rejects the
+   deploy with `artifactregistry.repositories.downloadArtifacts denied` otherwise (found on Demo's
+   first real promotion, #635).
 2. **Cloud Run service agent** (Google-managed, `service-<project-number>@serverless-robot-prod.iam.gserviceaccount.com`)
    — pulls the image at runtime (see "Release identity" below). Does not read secrets either.
 3. **Cloud Run runtime service account** — a dedicated per-environment identity (not the Compute
@@ -617,6 +622,9 @@ gcloud iam service-accounts add-iam-policy-binding "${RUNTIME_SA}" --project sus
 gcloud artifacts repositories add-iam-policy-binding "${AR_REPO}" --project sushigo-app --location "${AR_LOCATION}" \
   --member "serviceAccount:service-${DEMO_NUMBER}@serverless-robot-prod.iam.gserviceaccount.com" \
   --role roles/artifactregistry.reader
+# ...and Cloud Run also requires the deploying identity itself to be able to read a cross-project image:
+gcloud artifacts repositories add-iam-policy-binding "${AR_REPO}" --project sushigo-app --location "${AR_LOCATION}" \
+  --member "serviceAccount:${DEPLOY_SA}" --role roles/artifactregistry.reader
 
 # 3. WIF pool/provider trusting this repository only, then let it impersonate the deploy SA
 gcloud iam workload-identity-pools create github-pool --location global --project sushigo-demo
