@@ -14,7 +14,7 @@ services inside one shared project — but they are **not** all driven the same 
 | Environment | GCP project | Cloud Run service | Domain | Trigger | Docker target | Purpose | Data |
 |---|---|---|---|---|---|---|---|
 | QA / Preview | `sushigo-app` (existing, redesignated) | `sushigo-preview` (existing) | `preview.sushigo-romita.com` (existing) | **Manual**, any branch | `preview` (convenience) | Pre-merge validation — evaluate a feature *before* it merges to `main` | Non-production / disposable |
-| Demo | `sushigo-demo` (new) | `sushigo-demo` | `demo.sushigo-romita.com` (not yet in DNS) | **Automatic**, on green `main` | `preview` (convenience) | Public portfolio/product demonstration | Synthetic / resettable |
+| Demo | `sushigo-demo` (new) | `sushigo-demo` | `sushigo-demo.pakodiaz.dev` (not yet in DNS) | **Automatic**, on green `main` | `preview` (convenience) | Public portfolio/product demonstration | Synthetic / resettable |
 | Production | `sushigo-prod` (new) | `sushigo-prod` | `admin.sushigo-romita.com` (not yet in DNS) | **Automatic**, on green `main` | `prod-cloudrun` (hardened, new) | Real SushiGo restaurant operation | Real / persistent |
 
 QA is **decoupled** from the automated release pipeline entirely — it is a manual, on-demand tool

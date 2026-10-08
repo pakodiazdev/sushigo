@@ -24,7 +24,7 @@ This document describes the deployment infrastructure, branch strategy, and CI/C
 | Environment | URL | Source branch | Deploy trigger |
 |-------------|-----|--------------|---------------|
 | **Preview** | `preview.sushigo-romita.com` | `feature/*` | Manual — from feature branch after PR review passes |
-| **Demo** | `demo.sushigo-romita.com` | `main` | Automatic — `deploy-demo` after `ci-gate` + `release-build-preview` on `main`, own GCP project (`sushigo-demo`), resettable synthetic data (#635, see [`deployment.md`](../../conventions/ci/deployment.md) → "Demo") |
+| **Demo** | `sushigo-demo.pakodiaz.dev` | `main` | Automatic — `deploy-demo` after `ci-gate` + `release-build-preview` on `main`, own GCP project (`sushigo-demo`), resettable synthetic data (#635, see [`deployment.md`](../../conventions/ci/deployment.md) → "Demo") |
 | **Production** | `admin.sushigo-romita.com` | `main` | Automatic — after full CI pipeline passes on merge to `main` |
 
 ---

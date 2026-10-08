@@ -23,7 +23,7 @@ class ReadinessCheckTest extends TestCase
         Passport::loadKeysFrom($this->keyDir);
         Config::set('passport.private_key', null);
         Config::set('passport.public_key', null);
-        Config::set('app.url', 'https://demo.sushigo-romita.com');
+        Config::set('app.url', 'https://sushigo-demo.pakodiaz.dev');
     }
 
     protected function tearDown(): void

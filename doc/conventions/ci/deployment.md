@@ -17,7 +17,7 @@ workflows, not part of the PR validation DAG.
 |---|---|---|---|
 | GCP project | `sushigo-app` | `sushigo-demo` | `sushigo-prod` |
 | Cloud Run service | `sushigo-preview` | `sushigo-demo` | `sushigo-prod` |
-| Domain | `preview.sushigo-romita.com` | `demo.sushigo-romita.com` | `admin.sushigo-romita.com` |
+| Domain | `preview.sushigo-romita.com` | `sushigo-demo.pakodiaz.dev` | `admin.sushigo-romita.com` |
 | GitHub Environment | `qa` | `demo` | `production` |
 | **Trigger** | **Manual** — `workflow_dispatch`, any branch | **Automatic** — on green `main` | **Automatic** — on green `main` |
 | **Docker target** | `preview` (convenience) | `preview` (convenience) | `prod-cloudrun` (hardened, new — see below) |
@@ -583,7 +583,7 @@ are the application's own env names (`config/demo.php`), not an environment pref
 | env var | `DEPLOY_SERVICE_ACCOUNT` | `gha-sushigo-demo@sushigo-demo.iam.gserviceaccount.com` |
 | env var | `RUNTIME_SERVICE_ACCOUNT` | `sushigo-demo-runtime@sushigo-demo.iam.gserviceaccount.com` |
 | env var | `STATE_BUCKET` | `sushigo-demo-promotion-state` |
-| env var | `APP_URL` | `https://demo.sushigo-romita.com` |
+| env var | `APP_URL` | `https://sushigo-demo.pakodiaz.dev` — deliberately **not** under `sushigo-romita.com`: Demo is a public showcase with fictional data and a published password, so it stays off the business's own domain (no shared cookie scope or reputation with Production's `admin.sushigo-romita.com`) |
 | env var | `DB_PORT` | optional, default `5432` |
 | env var | `DEMO_ACCOUNT_EMAIL` | optional, default `demo@sushigo.com`. Passed to the Cloud Run revision (`config/demo.php`), the smoke login and `demo-ops`' reset, so all three always agree |
 | env secret | `DB_HOST`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`, `APP_KEY` | Demo's own database and key (the migrate/reset jobs run on the runner). Same "two stores kept in sync" caveat as QA's `PREVIEW_*` note above |
@@ -731,7 +731,7 @@ setv WIF_PROVIDER            projects/972206171838/locations/global/workloadIden
 setv DEPLOY_SERVICE_ACCOUNT  gha-sushigo-demo@sushigo-demo.iam.gserviceaccount.com
 setv RUNTIME_SERVICE_ACCOUNT sushigo-demo-runtime@sushigo-demo.iam.gserviceaccount.com
 setv STATE_BUCKET            sushigo-demo-promotion-state
-setv APP_URL                 https://demo.sushigo-romita.com
+setv APP_URL                 https://sushigo-demo.pakodiaz.dev
 ```
 
 **Verify** (names only — never print values):
@@ -756,7 +756,7 @@ Demo on — a separate image for release builds, or a `Keep` rule on the `releas
 1. The next green `main` creates the service. Its smoke test fails (the database has no demo account yet) and **pauses the queue**. That's expected.
 2. `demo-ops` → `reset` with `sha` = that commit: migrates if needed and seeds the canonical data.
 3. `demo-ops` → `resume`. The next green `main` promotes normally.
-4. Map the domain: `gcloud beta run domain-mappings create --service sushigo-demo --domain demo.sushigo-romita.com --region <region> --project sushigo-demo`, then add the DNS record it prints (the same mechanism as `preview.sushigo-romita.com`). Cloud Run provisions the HTTPS certificate.
+4. Map the domain: `gcloud beta run domain-mappings create --service sushigo-demo --domain sushigo-demo.pakodiaz.dev --region us-central1 --project sushigo-demo` (the base domain `pakodiaz.dev` must be verified in Google Search Console for the account running it), then add the DNS record it prints at the registrar — a `CNAME` from `sushigo-demo` to `ghs.googlehosted.com.` (the same mechanism as `preview.sushigo-romita.com`). Cloud Run provisions the HTTPS certificate once DNS resolves; allow 15–60 minutes.
 
 ## Migrations
 
@@ -858,7 +858,7 @@ have a concrete starting checklist:
       TD-07. `demo` created the same way (#635, 2026-10-06 — its values are loaded per "Demo —
       implemented (#635)" → "Loading secrets and variables"). `production` still open — create it
       the same way when #636 lands.
-- [ ] Point `demo.sushigo-romita.com` and `admin.sushigo-romita.com` at their respective Cloud Run
+- [ ] Point `sushigo-demo.pakodiaz.dev` and `admin.sushigo-romita.com` at their respective Cloud Run
       services (domain mapping, same mechanism already used for `preview.sushigo-romita.com`).
 - [x] Build the `sushigo-api-prod` and `sushigo-api-preview` build-and-push workflows (triggered on
       `main`, distinct from the existing manual `deploy-preview.yml`, which keeps driving QA) —
