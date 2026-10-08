@@ -335,9 +335,11 @@ job.
 
 ## What stays independent
 
-`deploy-preview.yml`, `update-iteration-progress.yml` (badge), and `wif-smoke-test.yml` are
-operational workflows, not PR validation — they are **not** part of this DAG and remain
-independently runnable. See [`deployment.md`](./deployment.md) for the environment and
+`deploy-preview.yml`, `demo-ops.yml`, `update-iteration-progress.yml` (badge), and
+`wif-smoke-test.yml` are operational workflows, not PR validation — they are **not** part of this DAG
+and remain independently runnable. The same holds for the post-`ci-gate` jobs `ci.yml` runs on a push
+to `main` only (`release-build-*`, and `deploy-demo` → `_deploy-demo.yml`, #635): they sit *after*
+`ci-gate`, never in its `needs`, so they can never turn a PR's required check red. See [`deployment.md`](./deployment.md) for the environment and
 release-promotion contract ([TD-07](../../decisions/td-07-environment-release-promotion-contract.md))
 these operational workflows implement.
 

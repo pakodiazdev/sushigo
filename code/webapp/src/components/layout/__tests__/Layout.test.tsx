@@ -39,6 +39,9 @@ vi.mock('@/components/layout/Header', () => ({ default: () => null }))
 vi.mock('@/components/layout/Sidebar', () => ({ default: () => null }))
 vi.mock('@/components/ui/breadcrumbs', () => ({ Breadcrumbs: () => null }))
 vi.mock('@/components/dev', () => ({ DevDebugger: () => null }))
+vi.mock('@/features/platform/demo-mode', () => ({
+  DemoBanner: () => <div data-testid="demo-banner" />,
+}))
 
 let mockPathname = '/dashboard'
 
@@ -179,6 +182,26 @@ describe('Layout — Auth Guards', () => {
       render(<Layout />)
 
       expect(initMock).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('Demo banner (#635)', () => {
+    it('renders the demo banner on public routes', () => {
+      setPath('/login')
+      setAuthState({ isAuthenticated: false, isLoading: false })
+
+      const { getByTestId } = render(<Layout />)
+
+      expect(getByTestId('demo-banner')).toBeTruthy()
+    })
+
+    it('renders the demo banner above the authenticated shell', () => {
+      setPath('/dashboard')
+      setAuthState({ isAuthenticated: true, user: { id: 1 } })
+
+      const { getByTestId } = render(<Layout />)
+
+      expect(getByTestId('demo-banner')).toBeTruthy()
     })
   })
 })

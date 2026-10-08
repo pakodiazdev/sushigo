@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\DemoSandboxMiddleware;
 use App\Http\Middleware\SetTestTimeMiddleware;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -14,9 +15,13 @@ return Application::configure(basePath: dirname(__DIR__))
         health: 'api/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // DemoSandboxMiddleware (#635, no-op unless APP_ENV=demo) is prepended so a
+        // blocked route is refused before route-model binding runs — the 403 never
+        // depends on (or reveals) whether the bound record exists.
         $middleware->api(prepend: [
             SetTestTimeMiddleware::class,
             \Illuminate\Http\Middleware\HandleCors::class,
+            DemoSandboxMiddleware::class,
         ]);
 
         // Trust all proxies (nginx reverse proxy)

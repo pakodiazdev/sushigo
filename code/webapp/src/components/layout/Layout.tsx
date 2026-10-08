@@ -6,6 +6,7 @@ import Sidebar from './Sidebar';
 import { Breadcrumbs } from '@/components/ui/breadcrumbs';
 import { Loader2 } from 'lucide-react';
 import { DevDebugger } from '@/components/dev';
+import { DemoBanner } from '@/features/platform/demo-mode';
 import { useApplicationClockStore } from '@/stores/clock.store';
 
 export default function Layout() {
@@ -72,6 +73,7 @@ export default function Layout() {
     if (isPublicRoute) {
         return (
             <>
+                <DemoBanner />
                 <Outlet />
                 {devTools}
             </>
@@ -85,22 +87,26 @@ export default function Layout() {
 
     return (
         <>
-            <div className="flex h-screen overflow-hidden bg-background">
-                <Sidebar />
+            <div className="flex h-screen flex-col overflow-hidden bg-background">
+                <DemoBanner />
 
-                <div className="flex-1 flex flex-col overflow-hidden">
-                    <Header />
+                <div className="flex flex-1 overflow-hidden">
+                    <Sidebar />
 
-                    <main className="flex-1 overflow-y-auto p-4 lg:p-6 bg-gradient-to-br from-sushigo-cream/30 via-background to-sushigo-navy/5">
-                        {/* Breadcrumbs - Only show if not on home page */}
-                        {currentPath !== '/' && (
-                            <div className="mb-4">
-                                <Breadcrumbs />
-                            </div>
-                        )}
+                    <div className="flex-1 flex flex-col overflow-hidden">
+                        <Header />
 
-                        <Outlet />
-                    </main>
+                        <main className="flex-1 overflow-y-auto p-4 lg:p-6 bg-gradient-to-br from-sushigo-cream/30 via-background to-sushigo-navy/5">
+                            {/* Breadcrumbs - Only show if not on home page */}
+                            {currentPath !== '/' && (
+                                <div className="mb-4">
+                                    <Breadcrumbs />
+                                </div>
+                            )}
+
+                            <Outlet />
+                        </main>
+                    </div>
                 </div>
             </div>
             {devTools}
