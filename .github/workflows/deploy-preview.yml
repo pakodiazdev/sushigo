@@ -94,9 +94,9 @@ name: Deploy Preview (manual)
 #          password instead of falling back to the hardcoded default)
 #
 # `build` intentionally does NOT declare `environment: qa` — it only uses the pre-existing,
-# already-shared vars (GCP_PROJECT_ID, AR_LOCATION, AR_REPO, IMAGE_NAME_PREVIEW, API_URL_PREVIEW),
-# none of which are QA-exclusive (`sushigo-api-preview` is built once and used by *both* QA and
-# Demo, per deployment.md's registry table).
+# repo-level vars (GCP_PROJECT_ID, AR_LOCATION, AR_REPO, IMAGE_NAME_PREVIEW, API_URL_PREVIEW), not
+# environment-scoped ones. `sushigo-api-preview` is QA's image alone; Demo's release builds publish
+# to `sushigo-api-demo` (IMAGE_NAME_DEMO), per deployment.md's registry table.
 #
 # ── Deploy configuration — binds the SAME GCP Secret Manager secrets the service already used ────
 # `gcloud run deploy` originally set nothing beyond `--image`/`--region`, relying on Cloud Run

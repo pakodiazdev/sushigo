@@ -38,6 +38,7 @@ return [
         'dev' => Database\Seeders\Development\DevelopmentSeeder::class,
         'devtest' => Database\Seeders\Development\DevelopmentSeeder::class,
         'testing' => Database\Seeders\Development\DevelopmentSeeder::class,
+        'demo' => Database\Seeders\Demo\DemoSeeder::class,
     ],
 
     'passwords' => $seederPasswords,
