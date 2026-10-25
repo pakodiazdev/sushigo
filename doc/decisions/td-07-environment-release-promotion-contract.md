@@ -14,7 +14,7 @@ services inside one shared project — but they are **not** all driven the same 
 | Environment | GCP project | Cloud Run service | Domain | Trigger | Docker target | Purpose | Data |
 |---|---|---|---|---|---|---|---|
 | QA / Preview | `sushigo-app` (existing, redesignated) | `sushigo-preview` (existing) | `preview.sushigo-romita.com` (existing) | **Manual**, any branch | `preview` (convenience) | Pre-merge validation — evaluate a feature *before* it merges to `main` | Non-production / disposable |
-| Demo | `sushigo-demo` (new) | `sushigo-demo` | `demo.sushigo-romita.com` (not yet in DNS) | **Automatic**, on green `main` | `preview` (convenience) | Public portfolio/product demonstration | Synthetic / resettable |
+| Demo | `sushigo-demo` (new) | `sushigo-demo` | `sushigo-demo.pakodiaz.dev` (not yet in DNS) | **Automatic**, on green `main` | `preview` (convenience) | Public portfolio/product demonstration | Synthetic / resettable |
 | Production | `sushigo-prod` (new) | `sushigo-prod` | `admin.sushigo-romita.com` (not yet in DNS) | **Automatic**, on green `main` | `prod-cloudrun` (hardened, new) | Real SushiGo restaurant operation | Real / persistent |
 
 QA is **decoupled** from the automated release pipeline entirely — it is a manual, on-demand tool
@@ -137,8 +137,12 @@ other's outcome.
 ```
 green main (ci-gate)
   ├─ build + push sushigo-api-prod:release-<sha>     (once, `prod-cloudrun` target) → deploy Production
-  └─ build + push sushigo-api-preview:release-<sha>  (once, convenience target) → deploy Demo
+  └─ build + push sushigo-api-demo:release-<sha>     (once, convenience target) → deploy Demo
 ```
+
+Demo's image was originally planned as `sushigo-api-preview`, shared with QA. #635 split it into
+its own `sushigo-api-demo`: the registry's cleanup policy keeps 4 versions per image, so sharing
+one let QA's manual deploys evict the digest Demo serves.
 
 Each image is identified by its **immutable Artifact Registry digest** (`@sha256:...`), never a
 mutable tag, and that digest is resolved **exactly once**, by the build job, immediately after the
@@ -267,6 +271,15 @@ against duplicates internally) rather than rely on a human remembering a separat
 [`deployment.md`](../conventions/ci/deployment.md)'s "Seeding" section for the full rationale and
 implementation. This narrows the rule to Demo and Production only — neither is affected by this
 correction.
+
+**Clarification (2026-09-23, #635):** for Demo, "must not run unattended" is read as "never as part of
+the automated promotion chain" — Demo's deploy pipeline (`_deploy-demo.yml`) migrates but never seeds.
+#635's own acceptance criteria require Demo's data to be restorable "automatically/reliably" through a
+"scheduled and/or manual" reset, so `demo-ops.yml` runs `php artisan demo:reset` on an explicit,
+separately-configured nightly schedule and on manual dispatch. It is a deliberately configured
+operator job, not a side effect of a deploy, and it is guarded to `APP_ENV=demo` only. Deleting the
+workflow's `schedule:` block makes Demo reset manual-only without any other change. Production is
+unaffected.
 
 **Migrations in Demo's and Production's automated pipelines must be expand/contract-compatible with
 the currently-running revision — a destructive migration is not safe to run automatically.** The
