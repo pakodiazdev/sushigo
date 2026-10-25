@@ -66,9 +66,12 @@ class ConfirmCloseApiTest extends TestCase
     {
         $employee = Employee::factory()->create(['is_active' => true]);
 
+        // Pinned: the factory's default start date is relative to the real clock (Faker ignores
+        // Carbon::setTestNow), so it eventually falls after the 2026-06-22 period under test.
         $employmentPeriod = EmploymentPeriod::factory()->create([
             'employee_id' => $employee->id,
             'branch_id' => $this->branch->id,
+            'start_date' => '2026-01-01',
             'is_active' => true,
         ]);
 
